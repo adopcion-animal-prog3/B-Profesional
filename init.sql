@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS mascotas (
   nombre VARCHAR(150) NOT NULL,
   especie VARCHAR(100) NOT NULL,
   raza VARCHAR(120),
-  edad INTEGER,
+  edad INTEGER CHECK (edad IS NULL OR edad >= 0),
   sexo VARCHAR(20) CHECK (sexo IN ('M','F','OTRO')),
   descripcion TEXT,
   adoptada BOOLEAN NOT NULL DEFAULT FALSE,
