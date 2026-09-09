@@ -51,3 +51,25 @@ CREATE TABLE IF NOT EXISTS historial_clinico (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ
 );
+
+-- Datos de desarrollo (ficticios, no reales y no sensibles)
+-- Estos registros permiten probar el backend y las consultas sin violar
+-- las restricciones actuales del esquema.
+INSERT INTO usuarios (nombre, email, password_hash, rol)
+VALUES
+  ('Administrador Demo', 'admin.dev@example.com', 'dev_admin_hash_001', 'ADMIN'),
+  ('Adoptante Demo', 'adoptante.dev@example.com', 'dev_adoptante_hash_001', 'ADOPTANTE'),
+  ('Adoptante Secundario', 'adoptante2.dev@example.com', 'dev_adoptante_hash_002', 'ADOPTANTE');
+
+INSERT INTO mascotas (nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por)
+VALUES
+  ('Luna', 'Perro', 'Labrador', 2, 'F', 'Perra sociable, muy activa y amigable.', FALSE,
+   (SELECT id FROM usuarios WHERE email = 'admin.dev@example.com')),
+  ('Simón', 'Gato', 'Siames', 1, 'M', 'Gato tranquilo, ideal para departamentos pequeños.', FALSE,
+   (SELECT id FROM usuarios WHERE email = 'adoptante.dev@example.com')),
+  ('Nina', 'Conejo', 'Mini Lop', 3, 'F', 'Coneja muy cariñosa y dócil.', TRUE,
+   (SELECT id FROM usuarios WHERE email = 'adoptante2.dev@example.com')),
+  ('Max', 'Perro', 'Cruza', 5, 'M', 'Perro equilibrado, paciente y atento.', FALSE,
+   (SELECT id FROM usuarios WHERE email = 'admin.dev@example.com')),
+  ('Mimi', 'Gato', 'Persa', 4, 'OTRO', 'Gata curiosa, observadora y muy afectuosa.', FALSE,
+   (SELECT id FROM usuarios WHERE email = 'adoptante.dev@example.com'));
