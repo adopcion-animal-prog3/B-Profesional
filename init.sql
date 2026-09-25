@@ -69,7 +69,7 @@ VALUES
    (SELECT id FROM usuarios WHERE email = 'adoptante.dev@example.com')),
   ('Nina', 'Conejo', 'Mini Lop', 3, 'F', 'Coneja muy cariñosa y dócil.', TRUE,
    (SELECT id FROM usuarios WHERE email = 'adoptante2.dev@example.com')),
-  ('Max', 'Perro', 'Cruza', 5, 'M', 'Perro equilibrado, paciente y atento.', FALSE,
+  ('Max', 'Perro', 'Juan', 5, 'M', 'Perro equilibrado, paciente y atento.', FALSE,
    (SELECT id FROM usuarios WHERE email = 'admin.dev@example.com')),
   ('Mimi', 'Gato', 'Persa', 4, 'OTRO', 'Gata curiosa, observadora y muy afectuosa.', FALSE,
    (SELECT id FROM usuarios WHERE email = 'adoptante.dev@example.com'));
