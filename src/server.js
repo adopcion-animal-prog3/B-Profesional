@@ -5,6 +5,7 @@ const { port } = require('./config/env');
 const healthRoutes = require('./routes/health.routes');
 const dbRoutes = require('./routes/db.routes');
 const mascotasRoutes = require('./routes/mascotas.routes');
+const authRoutes = require('./routes/auth.routes');
 
 const app = express();
 
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use(healthRoutes);
 app.use(dbRoutes);
 app.use(mascotasRoutes);
+app.use(authRoutes);
 
 const server = app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
