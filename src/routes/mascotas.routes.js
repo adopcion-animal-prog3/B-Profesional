@@ -164,7 +164,6 @@ router.put('/api/mascotas/:id', async (req, res) => {
     if (adoptada !== undefined) { fields.push(`adoptada = $${idx++}`); params.push(adoptada); }
 
     if (fields.length === 0) {
-      // Nothing to update
       const current = await query('SELECT id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at FROM mascotas WHERE id = $1', [numericId]);
       return res.status(200).json({ status: 'success', data: current.rows[0] });
     }
@@ -179,6 +178,33 @@ router.put('/api/mascotas/:id', async (req, res) => {
   } catch (error) {
     console.error('Error updating mascota:', error.message);
     return res.status(500).json({ status: 'error', message: 'Error updating mascota in database' });
+  }
+});
+
+router.delete('/api/mascotas/:id', async (req, res) => {
+  const { id } = req.params;
+  const numericId = Number(id);
+
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    return res.status(400).json({ status: 'error', message: 'Invalid id parameter' });
+  }
+
+  try {
+    const exists = await query('SELECT id FROM mascotas WHERE id = $1', [numericId]);
+    if (!exists.rows || exists.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Mascota not found' });
+    }
+
+    const result = await query('DELETE FROM mascotas WHERE id = $1 RETURNING id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at', [numericId]);
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Mascota deleted successfully',
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Error deleting mascota:', error.message);
+    return res.status(500).json({ status: 'error', message: 'Error deleting mascota from database' });
   }
 });
 
