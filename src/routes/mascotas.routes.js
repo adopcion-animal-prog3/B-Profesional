@@ -3,6 +3,57 @@ const { query } = require('../config/database');
 
 const router = express.Router();
 
+const SEXOS_VALIDOS = ['M', 'F', 'OTRO'];
+
+function validateMascota(data, partial = false) {
+  const has = (field) => Object.prototype.hasOwnProperty.call(data, field);
+  const textLength = (value) => [...value].length;
+
+  for (const [field, maxLength] of [['nombre', 150], ['especie', 100]]) {
+    if (partial && !has(field)) continue;
+    const value = data[field];
+    if (typeof value !== 'string' || value.trim() === '') {
+      return `Field "${field}" is required and must be a non-empty string`;
+    }
+    if (textLength(value) > maxLength) {
+      return `Field "${field}" must not exceed ${maxLength} characters`;
+    }
+  }
+
+  if (has('raza') && data.raza !== null) {
+    if (typeof data.raza !== 'string') {
+      return 'Field "raza" must be a string or null';
+    }
+    if (textLength(data.raza) > 120) {
+      return 'Field "raza" must not exceed 120 characters';
+    }
+  }
+
+  if (has('edad') && data.edad !== null &&
+      (!Number.isInteger(data.edad) || data.edad < 0 || data.edad > 2147483647)) {
+    return 'Field "edad" must be a non-negative integer within the supported range';
+  }
+
+  if (has('sexo') && data.sexo !== null && !SEXOS_VALIDOS.includes(data.sexo)) {
+    return 'Field "sexo" must be one of M, F, OTRO, or null';
+  }
+
+  if (has('descripcion') && data.descripcion !== null && typeof data.descripcion !== 'string') {
+    return 'Field "descripcion" must be a string or null';
+  }
+
+  if (has('adoptada') && typeof data.adoptada !== 'boolean') {
+    return 'Field "adoptada" must be boolean';
+  }
+
+  if (has('creado_por') && data.creado_por !== null &&
+      (!Number.isSafeInteger(data.creado_por) || data.creado_por <= 0)) {
+    return 'Field "creado_por" must be a positive integer or null';
+  }
+
+  return null;
+}
+
 router.get('/api/mascotas', async (req, res) => {
   try {
     const result = await query(
@@ -64,27 +115,14 @@ router.get('/api/mascotas/:id', async (req, res) => {
 // POST /api/mascotas — crear nueva mascota
 router.post('/api/mascotas', async (req, res) => {
   const body = req.body;
-  if (!body || typeof body !== 'object') {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return res.status(400).json({ status: 'error', message: 'Request body is required' });
   }
 
   const { nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por } = body;
-
-  // Validaciones básicas
-  if (!nombre || typeof nombre !== 'string' || nombre.trim() === '') {
-    return res.status(400).json({ status: 'error', message: 'Field "nombre" is required' });
-  }
-  if (!especie || typeof especie !== 'string' || especie.trim() === '') {
-    return res.status(400).json({ status: 'error', message: 'Field "especie" is required' });
-  }
-  if (edad !== undefined && (!Number.isInteger(edad) || edad < 0)) {
-    return res.status(400).json({ status: 'error', message: 'Field "edad" must be a non-negative integer' });
-  }
-  if (sexo !== undefined && !['M', 'F', 'OTRO'].includes(sexo)) {
-    return res.status(400).json({ status: 'error', message: 'Field "sexo" must be one of M, F, OTRO' });
-  }
-  if (adoptada !== undefined && typeof adoptada !== 'boolean') {
-    return res.status(400).json({ status: 'error', message: 'Field "adoptada" must be boolean' });
+  const validationError = validateMascota(body);
+  if (validationError) {
+    return res.status(400).json({ status: 'error', message: validationError });
   }
 
   try {
@@ -120,27 +158,14 @@ router.put('/api/mascotas/:id', async (req, res) => {
     return res.status(400).json({ status: 'error', message: 'Invalid id parameter' });
   }
 
-  if (!body || typeof body !== 'object') {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return res.status(400).json({ status: 'error', message: 'Request body is required' });
   }
 
   const { nombre, especie, raza, edad, sexo, descripcion, adoptada } = body;
-
-  // Basic validations for provided fields
-  if (nombre !== undefined && (typeof nombre !== 'string' || nombre.trim() === '')) {
-    return res.status(400).json({ status: 'error', message: 'Field "nombre" must be a non-empty string' });
-  }
-  if (especie !== undefined && (typeof especie !== 'string' || especie.trim() === '')) {
-    return res.status(400).json({ status: 'error', message: 'Field "especie" must be a non-empty string' });
-  }
-  if (edad !== undefined && (!Number.isInteger(edad) || edad < 0)) {
-    return res.status(400).json({ status: 'error', message: 'Field "edad" must be a non-negative integer' });
-  }
-  if (sexo !== undefined && !['M', 'F', 'OTRO'].includes(sexo)) {
-    return res.status(400).json({ status: 'error', message: 'Field "sexo" must be one of M, F, OTRO' });
-  }
-  if (adoptada !== undefined && typeof adoptada !== 'boolean') {
-    return res.status(400).json({ status: 'error', message: 'Field "adoptada" must be boolean' });
+  const validationError = validateMascota(body, true);
+  if (validationError) {
+    return res.status(400).json({ status: 'error', message: validationError });
   }
 
   try {
