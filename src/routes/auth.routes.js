@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth.middleware');
+const requireRole = require('../middleware/role.middleware');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,6 +23,16 @@ router.get('/api/auth/validate-token', authenticateToken, (req, res) => {
       user: req.user,
     },
   });
+});
+
+// Route to test ADMIN-only access
+router.get('/api/auth/admin-only', authenticateToken, requireRole('ADMIN'), (req, res) => {
+  return res.status(200).json({ status: 'success', data: { message: 'admin access granted' } });
+});
+
+// Route to test ADOPTANTE-only access
+router.get('/api/auth/adoptante-only', authenticateToken, requireRole('ADOPTANTE'), (req, res) => {
+  return res.status(200).json({ status: 'success', data: { message: 'adoptante access granted' } });
 });
 
 router.post('/api/auth/login', async (req, res) => {
