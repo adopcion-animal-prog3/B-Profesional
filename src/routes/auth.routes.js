@@ -2,6 +2,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../config/database');
+const authenticateToken = require('../middleware/auth.middleware');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -12,6 +13,15 @@ const getPublicUser = (user) => ({
   nombre: user.nombre,
   email: user.email,
   rol: user.rol,
+});
+
+router.get('/api/auth/validate-token', authenticateToken, (req, res) => {
+  return res.status(200).json({
+    status: 'success',
+    data: {
+      user: req.user,
+    },
+  });
 });
 
 router.post('/api/auth/login', async (req, res) => {
@@ -48,7 +58,7 @@ router.post('/api/auth/login', async (req, res) => {
     const user = result.rows[0];
 
     let passwordMatches = false;
-    if (typeof user.password_hash === 'string') {
+    if (typeof user?.password_hash === 'string') {
       try {
         passwordMatches = await bcrypt.compare(password, user.password_hash);
       } catch (error) {
