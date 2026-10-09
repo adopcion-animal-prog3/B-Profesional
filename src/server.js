@@ -6,6 +6,7 @@ const healthRoutes = require('./routes/health.routes');
 const dbRoutes = require('./routes/db.routes');
 const mascotasRoutes = require('./routes/mascotas.routes');
 const authRoutes = require('./routes/auth.routes');
+const solicitudesRoutes = require('./routes/solicitudes.routes');
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(healthRoutes);
 app.use(dbRoutes);
 app.use(mascotasRoutes);
 app.use(authRoutes);
+app.use(solicitudesRoutes);
 
 const server = app.listen(port, () => {
   console.log(`Servidor escuchando en http://localhost:${port}`);
