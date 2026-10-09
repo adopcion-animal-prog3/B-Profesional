@@ -1,0 +1,59 @@
+const express = require('express');
+const { query } = require('../config/database');
+const authenticateToken = require('../middleware/auth.middleware');
+
+const router = express.Router();
+
+// POST /api/solicitudes — crear una solicitud de adopción
+router.post('/api/solicitudes', authenticateToken, async (req, res) => {
+  const body = req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ status: 'error', message: 'Request body is required' });
+  }
+
+  const { mascota_id, mensaje } = body;
+  const mascotaId = Number(mascota_id);
+
+  if (!Number.isInteger(mascotaId) || mascotaId <= 0) {
+    return res.status(400).json({ status: 'error', message: 'mascota_id must be a positive integer' });
+  }
+
+  if (mensaje !== undefined && mensaje !== null && typeof mensaje !== 'string') {
+    return res.status(400).json({ status: 'error', message: 'mensaje must be a string' });
+  }
+
+  const usuarioId = req.user && req.user.id;
+  if (!usuarioId) {
+    return res.status(401).json({ status: 'error', message: 'Authentication required' });
+  }
+
+  try {
+    // Verificar que la mascota exista
+    const mascotaRes = await query(
+      'SELECT id, adoptada FROM mascotas WHERE id = $1',
+      [mascotaId]
+    );
+
+    if (!mascotaRes.rows || mascotaRes.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Mascota not found' });
+    }
+
+    const mascota = mascotaRes.rows[0];
+    if (mascota.adoptada === true) {
+      return res.status(400).json({ status: 'error', message: 'Mascota is not available for adoption' });
+    }
+
+    const insertRes = await query(
+      'INSERT INTO solicitudes_adopcion (usuario_id, mascota_id, estado, mensaje) VALUES ($1, $2, $3, $4) RETURNING id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at',
+      [usuarioId, mascotaId, 'PENDIENTE', mensaje || null]
+    );
+
+    const created = insertRes.rows[0];
+    return res.status(201).json({ status: 'success', data: created });
+  } catch (error) {
+    console.error('Error creating solicitud:', error.message);
+    return res.status(500).json({ status: 'error', message: 'Error creating solicitud' });
+  }
+});
+
+module.exports = router;
