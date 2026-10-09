@@ -43,6 +43,57 @@ router.get('/api/solicitudes', authenticateToken, requireRole(['ADMIN', 'ADOPTAN
   }
 });
 
+router.get('/api/solicitudes/:id', authenticateToken, requireRole(['ADMIN', 'ADOPTANTE']), async (req, res) => {
+  const { id } = req.params;
+  const solicitudId = Number(id);
+
+  if (!Number.isInteger(solicitudId) || solicitudId <= 0) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Invalid id parameter',
+    });
+  }
+
+  const userRole = req.user && req.user.rol;
+  const userId = req.user && req.user.id;
+
+  try {
+    const result = await query(
+      `SELECT id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at
+       FROM solicitudes_adopcion
+       WHERE id = $1`,
+      [solicitudId]
+    );
+
+    if (!result.rows || result.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Solicitud not found',
+      });
+    }
+
+    const solicitud = result.rows[0];
+
+    if (userRole === 'ADOPTANTE' && solicitud.usuario_id !== userId) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Insufficient permissions',
+      });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: solicitud,
+    });
+  } catch (error) {
+    console.error('Error fetching solicitud by id:', error.message);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Error retrieving solicitud from database',
+    });
+  }
+});
+
 // POST /api/solicitudes — crear una solicitud de adopción
 router.post('/api/solicitudes', authenticateToken, async (req, res) => {
   const body = req.body;
