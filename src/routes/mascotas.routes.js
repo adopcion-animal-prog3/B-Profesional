@@ -236,6 +236,7 @@ router.delete('/api/mascotas/:id', async (req, res) => {
 });
 
 router.get('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
   const { id } = req.params;
   const mascotaId = Number(id);
 
@@ -273,6 +274,47 @@ router.get('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'
       status: 'error',
       message: 'Error retrieving historial clinico from database',
     });
+    return res.status(400).json({ status: 'error', message: 'Invalid id parameter' });
+  }
+
+  const body = req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ status: 'error', message: 'Request body is required' });
+  }
+
+  const { descripcion, veterinario } = body;
+  if (typeof descripcion !== 'string' || descripcion.trim() === '') {
+    return res.status(400).json({ status: 'error', message: 'Field "descripcion" is required and must be a non-empty string' });
+  }
+
+  if (veterinario !== undefined && veterinario !== null && typeof veterinario !== 'string') {
+    return res.status(400).json({ status: 'error', message: 'Field "veterinario" must be a string or null' });
+  }
+
+  const normalizedDescripcion = descripcion.trim();
+  const normalizedVeterinario = (veterinario === undefined || veterinario === null) ? null : veterinario.trim();
+
+  if (normalizedVeterinario !== null && normalizedVeterinario.length > 200) {
+    return res.status(400).json({ status: 'error', message: 'Field "veterinario" must not exceed 200 characters' });
+  }
+
+  try {
+    const mascotaExists = await query('SELECT id FROM mascotas WHERE id = $1', [mascotaId]);
+    if (!mascotaExists.rows || mascotaExists.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Mascota not found' });
+    }
+
+    const insertQuery = `
+      INSERT INTO historial_clinico (mascota_id, descripcion, veterinario)
+      VALUES ($1, $2, $3)
+      RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
+    `;
+
+    const result = await query(insertQuery, [mascotaId, normalizedDescripcion, normalizedVeterinario]);
+    return res.status(201).json({ status: 'success', data: result.rows[0] });
+  } catch (error) {
+    console.error('Error creating historial clinico:', error.message);
+    return res.status(500).json({ status: 'error', message: 'Error creating historial clinico in database' });
   }
 });
 
