@@ -20,7 +20,7 @@ app.use(authRoutes);
 app.use(solicitudesRoutes);
 
 const server = app.listen(port, () => {
-  console.log(`Servidor escuchando en http://localhost:${port}`);
+  console.info(`Servidor escuchando en http://localhost:${port}`);
 });
 
 module.exports = { app, server };
