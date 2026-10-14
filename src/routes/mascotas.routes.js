@@ -236,7 +236,6 @@ router.delete('/api/mascotas/:id', async (req, res) => {
 });
 
 router.get('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
-router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
   const { id } = req.params;
   const mascotaId = Number(id);
 
@@ -274,7 +273,18 @@ router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN
       status: 'error',
       message: 'Error retrieving historial clinico from database',
     });
-    return res.status(400).json({ status: 'error', message: 'Invalid id parameter' });
+  }
+});
+
+router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  const { id } = req.params;
+  const mascotaId = Number(id);
+
+  if (!Number.isInteger(mascotaId) || mascotaId <= 0) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Invalid id parameter',
+    });
   }
 
   const body = req.body;
@@ -315,6 +325,102 @@ router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN
   } catch (error) {
     console.error('Error creating historial clinico:', error.message);
     return res.status(500).json({ status: 'error', message: 'Error creating historial clinico in database' });
+  }
+});
+
+router.put('/api/historial/:id', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  const { id } = req.params;
+  const historialId = Number(id);
+
+  if (!Number.isInteger(historialId) || historialId <= 0) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Invalid id parameter',
+    });
+  }
+
+  const body = req.body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return res.status(400).json({ status: 'error', message: 'Request body is required' });
+  }
+
+  const forbiddenFields = ['id', 'mascota_id', 'created_at'];
+  const hasForbiddenField = forbiddenFields.some((field) => Object.prototype.hasOwnProperty.call(body, field));
+  if (hasForbiddenField) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Fields "id", "mascota_id" and "created_at" cannot be modified',
+    });
+  }
+
+  const setFields = [];
+  const params = [];
+  let paramIndex = 1;
+
+  if (Object.prototype.hasOwnProperty.call(body, 'fecha_registro')) {
+    const value = body.fecha_registro;
+    if (typeof value !== 'string' || value.trim() === '') {
+      return res.status(400).json({ status: 'error', message: 'Field "fecha_registro" must be a non-empty ISO date string' });
+    }
+
+    const parsedDate = new Date(value);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ status: 'error', message: 'Field "fecha_registro" must be a valid date' });
+    }
+
+    setFields.push(`fecha_registro = $${paramIndex++}`);
+    params.push(value);
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, 'descripcion')) {
+    const value = body.descripcion;
+    if (typeof value !== 'string' || value.trim() === '') {
+      return res.status(400).json({ status: 'error', message: 'Field "descripcion" is required and must be a non-empty string' });
+    }
+
+    setFields.push(`descripcion = $${paramIndex++}`);
+    params.push(value.trim());
+  }
+
+  if (Object.prototype.hasOwnProperty.call(body, 'veterinario')) {
+    const value = body.veterinario;
+    if (value !== null && value !== undefined && typeof value !== 'string') {
+      return res.status(400).json({ status: 'error', message: 'Field "veterinario" must be a string or null' });
+    }
+
+    setFields.push(`veterinario = $${paramIndex++}`);
+    params.push(value === null || value === undefined ? null : value.trim());
+  }
+
+  try {
+    const existing = await query('SELECT id FROM historial_clinico WHERE id = $1', [historialId]);
+    if (!existing.rows || existing.rows.length === 0) {
+      return res.status(404).json({ status: 'error', message: 'Historial clinico not found' });
+    }
+
+    if (setFields.length === 0) {
+      const current = await query(
+        'SELECT id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at FROM historial_clinico WHERE id = $1',
+        [historialId]
+      );
+      return res.status(200).json({ status: 'success', data: current.rows[0] });
+    }
+
+    setFields.push('updated_at = NOW()');
+    const updateQuery = `
+      UPDATE historial_clinico
+      SET ${setFields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
+    `;
+
+    params.push(historialId);
+    const result = await query(updateQuery, params);
+
+    return res.status(200).json({ status: 'success', data: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating historial clinico:', error.message);
+    return res.status(500).json({ status: 'error', message: 'Error updating historial clinico in database' });
   }
 });
 
