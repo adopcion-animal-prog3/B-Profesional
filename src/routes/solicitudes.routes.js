@@ -146,4 +146,60 @@ router.post('/api/solicitudes', authenticateToken, async (req, res) => {
   }
 });
 
+router.put('/api/solicitudes/:id', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  const { id } = req.params;
+  const solicitudId = Number(id);
+
+  if (!Number.isInteger(solicitudId) || solicitudId <= 0) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Invalid id parameter',
+    });
+  }
+
+  const { estado } = req.body || {};
+  const allowedStates = ['PENDIENTE', 'APROBADA', 'RECHAZADA'];
+
+  if (typeof estado !== 'string' || !allowedStates.includes(estado)) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Estado must be one of: PENDIENTE, APROBADA, RECHAZADA',
+    });
+  }
+
+  try {
+    const existing = await query(
+      `SELECT id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at
+       FROM solicitudes_adopcion WHERE id = $1`,
+      [solicitudId]
+    );
+
+    if (!existing.rows || existing.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Solicitud not found',
+      });
+    }
+
+    const result = await query(
+      `UPDATE solicitudes_adopcion
+       SET estado = $1, updated_at = NOW()
+       WHERE id = $2
+       RETURNING id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at`,
+      [estado, solicitudId]
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Error updating solicitud state:', error.message);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Error updating solicitud state',
+    });
+  }
+});
+
 module.exports = router;
