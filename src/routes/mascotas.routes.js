@@ -235,11 +235,45 @@ router.delete('/api/mascotas/:id', async (req, res) => {
   }
 });
 
+router.get('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
 router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
   const { id } = req.params;
   const mascotaId = Number(id);
 
   if (!Number.isInteger(mascotaId) || mascotaId <= 0) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Invalid id parameter',
+    });
+  }
+
+  try {
+    const mascotaResult = await query('SELECT id FROM mascotas WHERE id = $1', [mascotaId]);
+    if (!mascotaResult.rows || mascotaResult.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Mascota not found',
+      });
+    }
+
+    const historialResult = await query(
+      `SELECT id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
+       FROM historial_clinico
+       WHERE mascota_id = $1
+       ORDER BY fecha_registro DESC`,
+      [mascotaId]
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      data: historialResult.rows,
+    });
+  } catch (error) {
+    console.error('Error fetching historial clinico:', error.message);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Error retrieving historial clinico from database',
+    });
     return res.status(400).json({ status: 'error', message: 'Invalid id parameter' });
   }
 
