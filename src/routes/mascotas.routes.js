@@ -424,5 +424,48 @@ router.put('/api/historial/:id', authenticateToken, requireRole('ADMIN'), async 
   }
 });
 
+router.delete('/api/historial/:id', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  const { id } = req.params;
+  const historialId = Number(id);
+
+  if (!Number.isInteger(historialId) || historialId <= 0) {
+    return res.status(400).json({
+      status: 'error',
+      message: 'Invalid id parameter',
+    });
+  }
+
+  try {
+    const existing = await query(
+      'SELECT id FROM historial_clinico WHERE id = $1',
+      [historialId]
+    );
+
+    if (!existing.rows || existing.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Historial clinico not found',
+      });
+    }
+
+    const result = await query(
+      'DELETE FROM historial_clinico WHERE id = $1 RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at',
+      [historialId]
+    );
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Historial clinico deleted successfully',
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error('Error deleting historial clinico:', error.message);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Error deleting historial clinico from database',
+    });
+  }
+});
+
 module.exports = router;
 
