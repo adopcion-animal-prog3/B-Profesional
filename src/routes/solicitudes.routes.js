@@ -2,10 +2,11 @@ const express = require('express');
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth.middleware');
 const requireRole = require('../middleware/role.middleware');
+const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
-router.get('/api/solicitudes', authenticateToken, requireRole(['ADMIN', 'ADOPTANTE']), async (req, res) => {
+router.get('/api/solicitudes', authenticateToken, requireRole(['ADMIN', 'ADOPTANTE']), asyncHandler(async (req, res) => {
   const userRole = req.user && req.user.rol;
   const userId = req.user && req.user.id;
 
@@ -13,37 +14,29 @@ router.get('/api/solicitudes', authenticateToken, requireRole(['ADMIN', 'ADOPTAN
     return res.status(403).json({ status: 'error', message: 'Insufficient permissions' });
   }
 
-  try {
-    let sql = `
-      SELECT id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at
-      FROM solicitudes_adopcion
-    `;
-    const params = [];
+  let sql = `
+    SELECT id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at
+    FROM solicitudes_adopcion
+  `;
+  const params = [];
 
-    if (userRole === 'ADOPTANTE') {
-      sql += ' WHERE usuario_id = $1';
-      params.push(userId);
-    }
-
-    sql += ' ORDER BY created_at DESC';
-
-    const result = await query(sql, params);
-
-    return res.status(200).json({
-      status: 'success',
-      data: result.rows,
-      count: result.rows.length,
-    });
-  } catch (error) {
-    console.error('Error fetching solicitudes:', error.message);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Error retrieving solicitudes from database',
-    });
+  if (userRole === 'ADOPTANTE') {
+    sql += ' WHERE usuario_id = $1';
+    params.push(userId);
   }
-});
 
-router.get('/api/solicitudes/:id', authenticateToken, requireRole(['ADMIN', 'ADOPTANTE']), async (req, res) => {
+  sql += ' ORDER BY created_at DESC';
+
+  const result = await query(sql, params);
+
+  return res.status(200).json({
+    status: 'success',
+    data: result.rows,
+    count: result.rows.length,
+  });
+}));
+
+router.get('/api/solicitudes/:id', authenticateToken, requireRole(['ADMIN', 'ADOPTANTE']), asyncHandler(async (req, res) => {
   const { id } = req.params;
   const solicitudId = Number(id);
 
@@ -57,45 +50,36 @@ router.get('/api/solicitudes/:id', authenticateToken, requireRole(['ADMIN', 'ADO
   const userRole = req.user && req.user.rol;
   const userId = req.user && req.user.id;
 
-  try {
-    const result = await query(
-      `SELECT id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at
-       FROM solicitudes_adopcion
-       WHERE id = $1`,
-      [solicitudId]
-    );
+  const result = await query(
+    `SELECT id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at
+     FROM solicitudes_adopcion
+     WHERE id = $1`,
+    [solicitudId]
+  );
 
-    if (!result.rows || result.rows.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Solicitud not found',
-      });
-    }
-
-    const solicitud = result.rows[0];
-
-    if (userRole === 'ADOPTANTE' && solicitud.usuario_id !== userId) {
-      return res.status(403).json({
-        status: 'error',
-        message: 'Insufficient permissions',
-      });
-    }
-
-    return res.status(200).json({
-      status: 'success',
-      data: solicitud,
-    });
-  } catch (error) {
-    console.error('Error fetching solicitud by id:', error.message);
-    return res.status(500).json({
+  if (!result.rows || result.rows.length === 0) {
+    return res.status(404).json({
       status: 'error',
-      message: 'Error retrieving solicitud from database',
+      message: 'Solicitud not found',
     });
   }
-});
 
-// POST /api/solicitudes — crear una solicitud de adopción
-router.post('/api/solicitudes', authenticateToken, async (req, res) => {
+  const solicitud = result.rows[0];
+
+  if (userRole === 'ADOPTANTE' && solicitud.usuario_id !== userId) {
+    return res.status(403).json({
+      status: 'error',
+      message: 'Insufficient permissions',
+    });
+  }
+
+  return res.status(200).json({
+    status: 'success',
+    data: solicitud,
+  });
+}));
+
+router.post('/api/solicitudes', authenticateToken, asyncHandler(async (req, res) => {
   const body = req.body;
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return res.status(400).json({ status: 'error', message: 'Request body is required' });
@@ -117,36 +101,30 @@ router.post('/api/solicitudes', authenticateToken, async (req, res) => {
     return res.status(401).json({ status: 'error', message: 'Authentication required' });
   }
 
-  try {
-    // Verificar que la mascota exista
-    const mascotaRes = await query(
-      'SELECT id, adoptada FROM mascotas WHERE id = $1',
-      [mascotaId]
-    );
+  const mascotaRes = await query(
+    'SELECT id, adoptada FROM mascotas WHERE id = $1',
+    [mascotaId]
+  );
 
-    if (!mascotaRes.rows || mascotaRes.rows.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'Mascota not found' });
-    }
-
-    const mascota = mascotaRes.rows[0];
-    if (mascota.adoptada === true) {
-      return res.status(400).json({ status: 'error', message: 'Mascota is not available for adoption' });
-    }
-
-    const insertRes = await query(
-      'INSERT INTO solicitudes_adopcion (usuario_id, mascota_id, estado, mensaje) VALUES ($1, $2, $3, $4) RETURNING id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at',
-      [usuarioId, mascotaId, 'PENDIENTE', mensaje || null]
-    );
-
-    const created = insertRes.rows[0];
-    return res.status(201).json({ status: 'success', data: created });
-  } catch (error) {
-    console.error('Error creating solicitud:', error.message);
-    return res.status(500).json({ status: 'error', message: 'Error creating solicitud' });
+  if (!mascotaRes.rows || mascotaRes.rows.length === 0) {
+    return res.status(404).json({ status: 'error', message: 'Mascota not found' });
   }
-});
 
-router.put('/api/solicitudes/:id', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  const mascota = mascotaRes.rows[0];
+  if (mascota.adoptada === true) {
+    return res.status(400).json({ status: 'error', message: 'Mascota is not available for adoption' });
+  }
+
+  const insertRes = await query(
+    'INSERT INTO solicitudes_adopcion (usuario_id, mascota_id, estado, mensaje) VALUES ($1, $2, $3, $4) RETURNING id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at',
+    [usuarioId, mascotaId, 'PENDIENTE', mensaje || null]
+  );
+
+  const created = insertRes.rows[0];
+  return res.status(201).json({ status: 'success', data: created });
+}));
+
+router.put('/api/solicitudes/:id', authenticateToken, requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const { id } = req.params;
   const solicitudId = Number(id);
 
@@ -167,39 +145,31 @@ router.put('/api/solicitudes/:id', authenticateToken, requireRole('ADMIN'), asyn
     });
   }
 
-  try {
-    const existing = await query(
-      `SELECT id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at
-       FROM solicitudes_adopcion WHERE id = $1`,
-      [solicitudId]
-    );
+  const existing = await query(
+    `SELECT id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at
+     FROM solicitudes_adopcion WHERE id = $1`,
+    [solicitudId]
+  );
 
-    if (!existing.rows || existing.rows.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Solicitud not found',
-      });
-    }
-
-    const result = await query(
-      `UPDATE solicitudes_adopcion
-       SET estado = $1, updated_at = NOW()
-       WHERE id = $2
-       RETURNING id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at`,
-      [estado, solicitudId]
-    );
-
-    return res.status(200).json({
-      status: 'success',
-      data: result.rows[0],
-    });
-  } catch (error) {
-    console.error('Error updating solicitud state:', error.message);
-    return res.status(500).json({
+  if (!existing.rows || existing.rows.length === 0) {
+    return res.status(404).json({
       status: 'error',
-      message: 'Error updating solicitud state',
+      message: 'Solicitud not found',
     });
   }
-});
+
+  const result = await query(
+    `UPDATE solicitudes_adopcion
+     SET estado = $1, updated_at = NOW()
+     WHERE id = $2
+     RETURNING id, usuario_id, mascota_id, estado, mensaje, created_at, updated_at`,
+    [estado, solicitudId]
+  );
+
+  return res.status(200).json({
+    status: 'success',
+    data: result.rows[0],
+  });
+}));
 
 module.exports = router;

@@ -2,6 +2,7 @@ const express = require('express');
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth.middleware');
 const requireRole = require('../middleware/role.middleware');
+const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 
@@ -56,30 +57,20 @@ function validateMascota(data, partial = false) {
   return null;
 }
 
-router.get('/api/mascotas', async (req, res) => {
-  try {
-    const result = await query(
-      'SELECT id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at FROM mascotas'
-    );
+router.get('/api/mascotas', asyncHandler(async (req, res) => {
+  const result = await query(
+    'SELECT id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at FROM mascotas'
+  );
 
-    return res.status(200).json({
-      status: 'success',
-      data: result.rows,
-      count: result.rows.length,
-    });
-  } catch (error) {
-    console.error('Error fetching mascotas:', error.message);
-    return res.status(500).json({
-      status: 'error',
-      message: 'Error retrieving mascotas from database',
-    });
-  }
-});
+  return res.status(200).json({
+    status: 'success',
+    data: result.rows,
+    count: result.rows.length,
+  });
+}));
 
-// GET /api/mascotas/:id — obtener una mascota por id
-router.get('/api/mascotas/:id', async (req, res) => {
+router.get('/api/mascotas/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
-
   const numericId = Number(id);
   if (!Number.isInteger(numericId) || numericId <= 0) {
     return res.status(400).json({
@@ -88,34 +79,25 @@ router.get('/api/mascotas/:id', async (req, res) => {
     });
   }
 
-  try {
-    const result = await query(
-      'SELECT id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at FROM mascotas WHERE id = $1',
-      [numericId]
-    );
+  const result = await query(
+    'SELECT id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at FROM mascotas WHERE id = $1',
+    [numericId]
+  );
 
-    if (!result.rows || result.rows.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Mascota not found',
-      });
-    }
-
-    return res.status(200).json({
-      status: 'success',
-      data: result.rows[0],
-    });
-  } catch (error) {
-    console.error('Error fetching mascota by id:', error.message);
-    return res.status(500).json({
+  if (!result.rows || result.rows.length === 0) {
+    return res.status(404).json({
       status: 'error',
-      message: 'Error retrieving mascota from database',
+      message: 'Mascota not found',
     });
   }
-});
 
-// POST /api/mascotas — crear nueva mascota
-router.post('/api/mascotas', async (req, res) => {
+  return res.status(200).json({
+    status: 'success',
+    data: result.rows[0],
+  });
+}));
+
+router.post('/api/mascotas', asyncHandler(async (req, res) => {
   const body = req.body;
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return res.status(400).json({ status: 'error', message: 'Request body is required' });
@@ -127,31 +109,25 @@ router.post('/api/mascotas', async (req, res) => {
     return res.status(400).json({ status: 'error', message: validationError });
   }
 
-  try {
-    const insertQuery = `INSERT INTO mascotas (nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at`;
-    const params = [
-      nombre,
-      especie,
-      raza || null,
-      edad !== undefined ? edad : null,
-      sexo || null,
-      descripcion || null,
-      adoptada !== undefined ? adoptada : false,
-      creado_por || null,
-    ];
+  const insertQuery = `INSERT INTO mascotas (nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at`;
+  const params = [
+    nombre,
+    especie,
+    raza || null,
+    edad !== undefined ? edad : null,
+    sexo || null,
+    descripcion || null,
+    adoptada !== undefined ? adoptada : false,
+    creado_por || null,
+  ];
 
-    const result = await query(insertQuery, params);
-    const created = result.rows[0];
+  const result = await query(insertQuery, params);
+  const created = result.rows[0];
 
-    return res.status(201).json({ status: 'success', data: created });
-  } catch (error) {
-    console.error('Error creating mascota:', error.message);
-    return res.status(500).json({ status: 'error', message: 'Error creating mascota in database' });
-  }
-});
+  return res.status(201).json({ status: 'success', data: created });
+}));
 
-// PUT /api/mascotas/:id — actualizar una mascota existente
-router.put('/api/mascotas/:id', async (req, res) => {
+router.put('/api/mascotas/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const body = req.body;
 
@@ -170,45 +146,38 @@ router.put('/api/mascotas/:id', async (req, res) => {
     return res.status(400).json({ status: 'error', message: validationError });
   }
 
-  try {
-    // Check existence
-    const exists = await query('SELECT id FROM mascotas WHERE id = $1', [numericId]);
-    if (!exists.rows || exists.rows.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'Mascota not found' });
-    }
-
-    // Build dynamic update based on provided fields
-    const fields = [];
-    const params = [];
-    let idx = 1;
-
-    if (nombre !== undefined) { fields.push(`nombre = $${idx++}`); params.push(nombre); }
-    if (especie !== undefined) { fields.push(`especie = $${idx++}`); params.push(especie); }
-    if (raza !== undefined) { fields.push(`raza = $${idx++}`); params.push(raza); }
-    if (edad !== undefined) { fields.push(`edad = $${idx++}`); params.push(edad); }
-    if (sexo !== undefined) { fields.push(`sexo = $${idx++}`); params.push(sexo); }
-    if (descripcion !== undefined) { fields.push(`descripcion = $${idx++}`); params.push(descripcion); }
-    if (adoptada !== undefined) { fields.push(`adoptada = $${idx++}`); params.push(adoptada); }
-
-    if (fields.length === 0) {
-      const current = await query('SELECT id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at FROM mascotas WHERE id = $1', [numericId]);
-      return res.status(200).json({ status: 'success', data: current.rows[0] });
-    }
-
-    const updateQuery = `UPDATE mascotas SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at`;
-    params.push(numericId);
-
-    const result = await query(updateQuery, params);
-    const updated = result.rows[0];
-
-    return res.status(200).json({ status: 'success', data: updated });
-  } catch (error) {
-    console.error('Error updating mascota:', error.message);
-    return res.status(500).json({ status: 'error', message: 'Error updating mascota in database' });
+  const exists = await query('SELECT id FROM mascotas WHERE id = $1', [numericId]);
+  if (!exists.rows || exists.rows.length === 0) {
+    return res.status(404).json({ status: 'error', message: 'Mascota not found' });
   }
-});
 
-router.delete('/api/mascotas/:id', async (req, res) => {
+  const fields = [];
+  const params = [];
+  let idx = 1;
+
+  if (nombre !== undefined) { fields.push(`nombre = $${idx++}`); params.push(nombre); }
+  if (especie !== undefined) { fields.push(`especie = $${idx++}`); params.push(especie); }
+  if (raza !== undefined) { fields.push(`raza = $${idx++}`); params.push(raza); }
+  if (edad !== undefined) { fields.push(`edad = $${idx++}`); params.push(edad); }
+  if (sexo !== undefined) { fields.push(`sexo = $${idx++}`); params.push(sexo); }
+  if (descripcion !== undefined) { fields.push(`descripcion = $${idx++}`); params.push(descripcion); }
+  if (adoptada !== undefined) { fields.push(`adoptada = $${idx++}`); params.push(adoptada); }
+
+  if (fields.length === 0) {
+    const current = await query('SELECT id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at FROM mascotas WHERE id = $1', [numericId]);
+    return res.status(200).json({ status: 'success', data: current.rows[0] });
+  }
+
+  const updateQuery = `UPDATE mascotas SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at`;
+  params.push(numericId);
+
+  const result = await query(updateQuery, params);
+  const updated = result.rows[0];
+
+  return res.status(200).json({ status: 'success', data: updated });
+}));
+
+router.delete('/api/mascotas/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   const numericId = Number(id);
 
@@ -216,26 +185,21 @@ router.delete('/api/mascotas/:id', async (req, res) => {
     return res.status(400).json({ status: 'error', message: 'Invalid id parameter' });
   }
 
-  try {
-    const exists = await query('SELECT id FROM mascotas WHERE id = $1', [numericId]);
-    if (!exists.rows || exists.rows.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'Mascota not found' });
-    }
-
-    const result = await query('DELETE FROM mascotas WHERE id = $1 RETURNING id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at', [numericId]);
-
-    return res.status(200).json({
-      status: 'success',
-      message: 'Mascota deleted successfully',
-      data: result.rows[0],
-    });
-  } catch (error) {
-    console.error('Error deleting mascota:', error.message);
-    return res.status(500).json({ status: 'error', message: 'Error deleting mascota from database' });
+  const exists = await query('SELECT id FROM mascotas WHERE id = $1', [numericId]);
+  if (!exists.rows || exists.rows.length === 0) {
+    return res.status(404).json({ status: 'error', message: 'Mascota not found' });
   }
-});
 
-router.get('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  const result = await query('DELETE FROM mascotas WHERE id = $1 RETURNING id, nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por, created_at', [numericId]);
+
+  return res.status(200).json({
+    status: 'success',
+    message: 'Mascota deleted successfully',
+    data: result.rows[0],
+  });
+}));
+
+router.get('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const { id } = req.params;
   const mascotaId = Number(id);
 
@@ -246,37 +210,29 @@ router.get('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'
     });
   }
 
-  try {
-    const mascotaResult = await query('SELECT id FROM mascotas WHERE id = $1', [mascotaId]);
-    if (!mascotaResult.rows || mascotaResult.rows.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Mascota not found',
-      });
-    }
-
-    const historialResult = await query(
-      `SELECT id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
-       FROM historial_clinico
-       WHERE mascota_id = $1
-       ORDER BY fecha_registro DESC`,
-      [mascotaId]
-    );
-
-    return res.status(200).json({
-      status: 'success',
-      data: historialResult.rows,
-    });
-  } catch (error) {
-    console.error('Error fetching historial clinico:', error.message);
-    return res.status(500).json({
+  const mascotaResult = await query('SELECT id FROM mascotas WHERE id = $1', [mascotaId]);
+  if (!mascotaResult.rows || mascotaResult.rows.length === 0) {
+    return res.status(404).json({
       status: 'error',
-      message: 'Error retrieving historial clinico from database',
+      message: 'Mascota not found',
     });
   }
-});
 
-router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  const historialResult = await query(
+    `SELECT id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
+     FROM historial_clinico
+     WHERE mascota_id = $1
+     ORDER BY fecha_registro DESC`,
+    [mascotaId]
+  );
+
+  return res.status(200).json({
+    status: 'success',
+    data: historialResult.rows,
+  });
+}));
+
+router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const { id } = req.params;
   const mascotaId = Number(id);
 
@@ -308,27 +264,22 @@ router.post('/api/mascotas/:id/historial', authenticateToken, requireRole('ADMIN
     return res.status(400).json({ status: 'error', message: 'Field "veterinario" must not exceed 200 characters' });
   }
 
-  try {
-    const mascotaExists = await query('SELECT id FROM mascotas WHERE id = $1', [mascotaId]);
-    if (!mascotaExists.rows || mascotaExists.rows.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'Mascota not found' });
-    }
-
-    const insertQuery = `
-      INSERT INTO historial_clinico (mascota_id, descripcion, veterinario)
-      VALUES ($1, $2, $3)
-      RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
-    `;
-
-    const result = await query(insertQuery, [mascotaId, normalizedDescripcion, normalizedVeterinario]);
-    return res.status(201).json({ status: 'success', data: result.rows[0] });
-  } catch (error) {
-    console.error('Error creating historial clinico:', error.message);
-    return res.status(500).json({ status: 'error', message: 'Error creating historial clinico in database' });
+  const mascotaExists = await query('SELECT id FROM mascotas WHERE id = $1', [mascotaId]);
+  if (!mascotaExists.rows || mascotaExists.rows.length === 0) {
+    return res.status(404).json({ status: 'error', message: 'Mascota not found' });
   }
-});
 
-router.put('/api/historial/:id', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  const insertQuery = `
+    INSERT INTO historial_clinico (mascota_id, descripcion, veterinario)
+    VALUES ($1, $2, $3)
+    RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
+  `;
+
+  const result = await query(insertQuery, [mascotaId, normalizedDescripcion, normalizedVeterinario]);
+  return res.status(201).json({ status: 'success', data: result.rows[0] });
+}));
+
+router.put('/api/historial/:id', authenticateToken, requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const { id } = req.params;
   const historialId = Number(id);
 
@@ -392,39 +343,34 @@ router.put('/api/historial/:id', authenticateToken, requireRole('ADMIN'), async 
     params.push(value === null || value === undefined ? null : value.trim());
   }
 
-  try {
-    const existing = await query('SELECT id FROM historial_clinico WHERE id = $1', [historialId]);
-    if (!existing.rows || existing.rows.length === 0) {
-      return res.status(404).json({ status: 'error', message: 'Historial clinico not found' });
-    }
-
-    if (setFields.length === 0) {
-      const current = await query(
-        'SELECT id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at FROM historial_clinico WHERE id = $1',
-        [historialId]
-      );
-      return res.status(200).json({ status: 'success', data: current.rows[0] });
-    }
-
-    setFields.push('updated_at = NOW()');
-    const updateQuery = `
-      UPDATE historial_clinico
-      SET ${setFields.join(', ')}
-      WHERE id = $${paramIndex}
-      RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
-    `;
-
-    params.push(historialId);
-    const result = await query(updateQuery, params);
-
-    return res.status(200).json({ status: 'success', data: result.rows[0] });
-  } catch (error) {
-    console.error('Error updating historial clinico:', error.message);
-    return res.status(500).json({ status: 'error', message: 'Error updating historial clinico in database' });
+  const existing = await query('SELECT id FROM historial_clinico WHERE id = $1', [historialId]);
+  if (!existing.rows || existing.rows.length === 0) {
+    return res.status(404).json({ status: 'error', message: 'Historial clinico not found' });
   }
-});
 
-router.delete('/api/historial/:id', authenticateToken, requireRole('ADMIN'), async (req, res) => {
+  if (setFields.length === 0) {
+    const current = await query(
+      'SELECT id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at FROM historial_clinico WHERE id = $1',
+      [historialId]
+    );
+    return res.status(200).json({ status: 'success', data: current.rows[0] });
+  }
+
+  setFields.push('updated_at = NOW()');
+  const updateQuery = `
+    UPDATE historial_clinico
+    SET ${setFields.join(', ')}
+    WHERE id = $${paramIndex}
+    RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at
+  `;
+
+  params.push(historialId);
+  const result = await query(updateQuery, params);
+
+  return res.status(200).json({ status: 'success', data: result.rows[0] });
+}));
+
+router.delete('/api/historial/:id', authenticateToken, requireRole('ADMIN'), asyncHandler(async (req, res) => {
   const { id } = req.params;
   const historialId = Number(id);
 
@@ -435,37 +381,29 @@ router.delete('/api/historial/:id', authenticateToken, requireRole('ADMIN'), asy
     });
   }
 
-  try {
-    const existing = await query(
-      'SELECT id FROM historial_clinico WHERE id = $1',
-      [historialId]
-    );
+  const existing = await query(
+    'SELECT id FROM historial_clinico WHERE id = $1',
+    [historialId]
+  );
 
-    if (!existing.rows || existing.rows.length === 0) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Historial clinico not found',
-      });
-    }
-
-    const result = await query(
-      'DELETE FROM historial_clinico WHERE id = $1 RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at',
-      [historialId]
-    );
-
-    return res.status(200).json({
-      status: 'success',
-      message: 'Historial clinico deleted successfully',
-      data: result.rows[0],
-    });
-  } catch (error) {
-    console.error('Error deleting historial clinico:', error.message);
-    return res.status(500).json({
+  if (!existing.rows || existing.rows.length === 0) {
+    return res.status(404).json({
       status: 'error',
-      message: 'Error deleting historial clinico from database',
+      message: 'Historial clinico not found',
     });
   }
-});
+
+  const result = await query(
+    'DELETE FROM historial_clinico WHERE id = $1 RETURNING id, mascota_id, fecha_registro, descripcion, veterinario, created_at, updated_at',
+    [historialId]
+  );
+
+  return res.status(200).json({
+    status: 'success',
+    message: 'Historial clinico deleted successfully',
+    data: result.rows[0],
+  });
+}));
 
 module.exports = router;
 

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 
 const { port } = require('./config/env');
+const { notFoundHandler, errorHandler } = require('./middleware/error.middleware');
 const healthRoutes = require('./routes/health.routes');
 const dbRoutes = require('./routes/db.routes');
 const mascotasRoutes = require('./routes/mascotas.routes');
@@ -19,8 +20,9 @@ app.use(mascotasRoutes);
 app.use(authRoutes);
 app.use(solicitudesRoutes);
 
-const server = app.listen(port, () => {
-  console.info(`Servidor escuchando en http://localhost:${port}`);
-});
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+const server = app.listen(port, () => {});
 
 module.exports = { app, server };
