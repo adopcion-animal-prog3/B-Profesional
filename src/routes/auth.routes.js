@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth.middleware');
 const requireRole = require('../middleware/role.middleware');
+const asyncHandler = require('../utils/asyncHandler');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -35,33 +36,34 @@ router.get('/api/auth/adoptante-only', authenticateToken, requireRole('ADOPTANTE
   return res.status(200).json({ status: 'success', data: { message: 'adoptante access granted' } });
 });
 
-router.post('/api/auth/login', async (req, res) => {
-  const body = req.body;
-  if (!body || typeof body !== 'object' || Array.isArray(body)) {
-    return res.status(400).json({ status: 'error', message: 'Email and password are required' });
-  }
+router.post(
+  '/api/auth/login',
+  asyncHandler(async (req, res) => {
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return res.status(400).json({ status: 'error', message: 'Email and password are required' });
+    }
 
-  const { email, password } = body;
-  const normalizedEmail = typeof email === 'string' ? email.trim() : '';
+    const { email, password } = body;
+    const normalizedEmail = typeof email === 'string' ? email.trim() : '';
 
-  if (
-    typeof email !== 'string' ||
-    normalizedEmail === '' ||
-    normalizedEmail.length > 255 ||
-    !EMAIL_PATTERN.test(normalizedEmail) ||
-    typeof password !== 'string' ||
-    password.trim().length === 0
-  ) {
-    return res.status(400).json({ status: 'error', message: 'Email and password are required' });
-  }
+    if (
+      typeof email !== 'string' ||
+      normalizedEmail === '' ||
+      normalizedEmail.length > 255 ||
+      !EMAIL_PATTERN.test(normalizedEmail) ||
+      typeof password !== 'string' ||
+      password.trim().length === 0
+    ) {
+      return res.status(400).json({ status: 'error', message: 'Email and password are required' });
+    }
 
-  const jwtSecret = process.env.JWT_SECRET;
-  if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
-    console.error('JWT_SECRET is not configured');
-    return res.status(500).json({ status: 'error', message: 'Authentication service is not configured' });
-  }
+    const jwtSecret = process.env.JWT_SECRET;
+    if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
+      console.error('JWT_SECRET is not configured');
+      return res.status(500).json({ status: 'error', message: 'Authentication service is not configured' });
+    }
 
-  try {
     const result = await query(
       'SELECT id, nombre, email, rol, password_hash FROM usuarios WHERE LOWER(email) = $1',
       [normalizedEmail.toLowerCase()]
@@ -100,10 +102,7 @@ router.post('/api/auth/login', async (req, res) => {
         user: getPublicUser(user),
       },
     });
-  } catch (error) {
-    console.error('Error during login:', error.message);
-    return res.status(500).json({ status: 'error', message: 'Error authenticating user' });
-  }
-});
+  })
+);
 
 module.exports = router;
