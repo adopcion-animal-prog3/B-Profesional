@@ -5,6 +5,7 @@ const { query } = require('../config/database');
 const authenticateToken = require('../middleware/auth.middleware');
 const requireRole = require('../middleware/role.middleware');
 const asyncHandler = require('../utils/asyncHandler');
+const { successResponse, errorResponse } = require('../utils/apiResponse');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -18,22 +19,17 @@ const getPublicUser = (user) => ({
 });
 
 router.get('/api/auth/validate-token', authenticateToken, (req, res) => {
-  return res.status(200).json({
-    status: 'success',
-    data: {
-      user: req.user,
-    },
-  });
+  return res.status(200).json(successResponse({ user: req.user }));
 });
 
 // Route to test ADMIN-only access
 router.get('/api/auth/admin-only', authenticateToken, requireRole('ADMIN'), (req, res) => {
-  return res.status(200).json({ status: 'success', data: { message: 'admin access granted' } });
+  return res.status(200).json(successResponse({ message: 'admin access granted' }));
 });
 
 // Route to test ADOPTANTE-only access
 router.get('/api/auth/adoptante-only', authenticateToken, requireRole('ADOPTANTE'), (req, res) => {
-  return res.status(200).json({ status: 'success', data: { message: 'adoptante access granted' } });
+  return res.status(200).json(successResponse({ message: 'adoptante access granted' }));
 });
 
 router.post(
@@ -41,7 +37,7 @@ router.post(
   asyncHandler(async (req, res) => {
     const body = req.body;
     if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return res.status(400).json({ status: 'error', message: 'Email and password are required' });
+      return res.status(400).json(errorResponse('Email and password are required'));
     }
 
     const { email, password } = body;
@@ -55,13 +51,13 @@ router.post(
       typeof password !== 'string' ||
       password.trim().length === 0
     ) {
-      return res.status(400).json({ status: 'error', message: 'Email and password are required' });
+      return res.status(400).json(errorResponse('Email and password are required'));
     }
 
     const jwtSecret = process.env.JWT_SECRET;
     if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
       console.error('JWT_SECRET is not configured');
-      return res.status(500).json({ status: 'error', message: 'Authentication service is not configured' });
+      return res.status(500).json(errorResponse('Authentication service is not configured'));
     }
 
     const result = await query(
@@ -80,7 +76,7 @@ router.post(
     }
 
     if (!user || !passwordMatches) {
-      return res.status(401).json({ status: 'error', message: INVALID_CREDENTIALS });
+      return res.status(401).json(errorResponse(INVALID_CREDENTIALS));
     }
 
     const tokenPayload = {
@@ -95,13 +91,10 @@ router.post(
       algorithm: 'HS256',
     });
 
-    return res.status(200).json({
-      status: 'success',
-      data: {
-        token,
-        user: getPublicUser(user),
-      },
-    });
+    return res.status(200).json(successResponse({
+      token,
+      user: getPublicUser(user),
+    }));
   })
 );
 

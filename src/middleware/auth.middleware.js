@@ -1,22 +1,23 @@
 const jwt = require('jsonwebtoken');
+const { errorResponse } = require('../utils/apiResponse');
 
 const authenticateToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
-    return res.status(401).json({ status: 'error', message: 'Authentication required' });
+    return res.status(401).json(errorResponse('Authentication required'));
   }
 
   const [scheme, token] = authHeader.split(' ');
 
   if (!scheme || !token || scheme.toLowerCase() !== 'bearer') {
-    return res.status(401).json({ status: 'error', message: 'Invalid authorization header' });
+    return res.status(401).json(errorResponse('Invalid authorization header'));
   }
 
   const jwtSecret = process.env.JWT_SECRET;
   if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
     console.error('JWT_SECRET is not configured');
-    return res.status(500).json({ status: 'error', message: 'Authentication service is not configured' });
+    return res.status(500).json(errorResponse('Authentication service is not configured'));
   }
 
   try {
@@ -25,10 +26,10 @@ const authenticateToken = (req, res, next) => {
     return next();
   } catch (error) {
     if (error && error.name === 'TokenExpiredError') {
-      return res.status(401).json({ status: 'error', message: 'Token expired' });
+      return res.status(401).json(errorResponse('Token expired'));
     }
 
-    return res.status(401).json({ status: 'error', message: 'Invalid token' });
+    return res.status(401).json(errorResponse('Invalid token'));
   }
 };
 
