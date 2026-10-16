@@ -1,3 +1,5 @@
+const { errorResponse } = require('../utils/apiResponse');
+
 class HttpError extends Error {
   constructor(statusCode, message) {
     super(message);
@@ -55,10 +57,7 @@ const errorHandler = (error, req, res, next) => {
   const statusCode = normalizedError.statusCode || 500;
   const safeMessage = statusCode >= 500 ? 'Internal server error' : normalizedError.message;
 
-  return res.status(statusCode).json({
-    status: 'error',
-    message: safeMessage,
-  });
+  return res.status(statusCode).json(errorResponse(safeMessage, { status: 'error' }));
 };
 
 module.exports = {
