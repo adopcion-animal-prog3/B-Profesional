@@ -30,8 +30,15 @@ const openApiSpec = {
       ErrorResponse: {
         type: 'object',
         properties: {
+          success: { type: 'boolean', example: false },
           status: { type: 'string', enum: ['error'] },
           message: { type: 'string', description: 'Descripción del error' },
+          error: {
+            type: 'object',
+            properties: {
+              message: { type: 'string', description: 'Descripción del error' },
+            },
+          },
         },
         required: ['status', 'message'],
       },
@@ -110,12 +117,36 @@ const openApiSpec = {
         },
         required: ['status', 'data'],
       },
-      SaludResponse: {
+      HealthProcessResponse: {
         type: 'object',
         properties: {
-          status: { type: 'string', enum: ['ok'] },
+          success: { type: 'boolean', example: true },
+          status: { type: 'string', enum: ['success'] },
+          data: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', enum: ['ok'] },
+            },
+            required: ['status'],
+          },
         },
-        required: ['status'],
+        required: ['status', 'data'],
+      },
+      HealthDatabaseResponse: {
+        type: 'object',
+        properties: {
+          success: { type: 'boolean', example: true },
+          status: { type: 'string', enum: ['success'] },
+          data: {
+            type: 'object',
+            properties: {
+              status: { type: 'string', enum: ['ok'] },
+              databaseTime: { type: 'string', nullable: true, example: '2026-10-21T13:00:00.000Z' },
+            },
+            required: ['status'],
+          },
+        },
+        required: ['status', 'data'],
       },
     },
     responses: {
@@ -172,19 +203,28 @@ const openApiSpec = {
           },
         },
       },
+      ServiceUnavailable: {
+        description: 'Dependencia no disponible (PostgreSQL inaccesible)',
+        content: {
+          'application/json': {
+            schema: { $ref: '#/components/schemas/ErrorResponse' },
+          },
+        },
+      },
     },
   },
   paths: {
     '/health': {
       get: {
         tags: ['Health'],
-        summary: 'Verifica que el backend esté levantado',
+        summary: 'Verifica que el proceso de Express esté disponible',
+        description: 'Comprobación de vida del proceso. No consulta PostgreSQL y no depende de la base de datos.',
         responses: {
           200: {
-            description: 'Servicio disponible',
+            description: 'Proceso disponible',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/SaludResponse' },
+                schema: { $ref: '#/components/schemas/HealthProcessResponse' },
               },
             },
           },
@@ -194,24 +234,18 @@ const openApiSpec = {
     '/api/db-check': {
       get: {
         tags: ['Health'],
-        summary: 'Verifica la conexión y disponibilidad de PostgreSQL',
+        summary: 'Verifica la disponibilidad de PostgreSQL',
+        description: 'Ejecuta una comprobación mínima (SELECT 1) sobre el pool de conexiones existente.',
         responses: {
           200: {
             description: 'Base de datos disponible',
             content: {
               'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['ok'] },
-                    databaseTime: { type: 'string', nullable: true, example: '2026-10-16T13:00:00.000Z' },
-                  },
-                  required: ['status'],
-                },
+                schema: { $ref: '#/components/schemas/HealthDatabaseResponse' },
               },
             },
           },
-          503: { $ref: '#/components/responses/InternalError' },
+          503: { $ref: '#/components/responses/ServiceUnavailable' },
         },
       },
     },

@@ -1,15 +1,23 @@
 const express = require('express');
-const { query } = require('../config/database');
 const asyncHandler = require('../utils/asyncHandler');
-const { successResponse } = require('../utils/apiResponse');
+const { successResponse, errorResponse } = require('../utils/apiResponse');
+const { checkDatabaseHealth } = require('../services/health.service');
 
 const router = express.Router();
 
-router.get('/api/db-check', asyncHandler(async (req, res) => {
-  const result = await query('SELECT NOW() AS current_time');
-  const databaseTime = result.rows[0]?.current_time;
+const DATABASE_UNAVAILABLE_MESSAGE = 'Database is unavailable';
 
-  return res.status(200).json(successResponse({ databaseTime }));
+router.get('/api/db-check', asyncHandler(async (req, res) => {
+  const health = await checkDatabaseHealth();
+
+  if (!health.available) {
+    return res.status(503).json(errorResponse(DATABASE_UNAVAILABLE_MESSAGE));
+  }
+
+  return res.status(200).json(successResponse({
+    status: 'ok',
+    databaseTime: health.databaseTime,
+  }));
 }));
 
 module.exports = router;

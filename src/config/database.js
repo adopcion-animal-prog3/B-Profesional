@@ -11,6 +11,12 @@ const config = {
 
 const pool = new Pool(config);
 
+// Evita que un error de cliente inactivo termine el proceso y que la
+// comprobacion de salud pueda responder 503 en lugar de caer.
+pool.on('error', (error) => {
+  console.error('Error del pool de PostgreSQL:', error.code || 'UNKNOWN_ERROR');
+});
+
 module.exports = {
   query: (text, params) => pool.query(text, params),
   pool,
