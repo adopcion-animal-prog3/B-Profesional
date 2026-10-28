@@ -25,6 +25,7 @@ app.use(swaggerUiRoutes);
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const server = app.listen(port, () => {});
+// Solo escucha cuando se ejecuta directamente (node src/server.js); los tests importan `app`.
+const server = require.main === module ? app.listen(port, () => {}) : null;
 
 module.exports = { app, server };
