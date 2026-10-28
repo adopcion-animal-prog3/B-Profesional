@@ -6,3 +6,15 @@ Detalle completo en [`docs/EVALUACION.md`](docs/EVALUACION.md).
 <!-- calidad:fin -->
 
 # adopcionanimalbackend2
+## Pruebas automatizadas
+
+Usan el runner nativo de Node (`node:test`, Node 22+), sin dependencias nuevas.
+
+```bash
+npm test                # ejecuta todas las pruebas
+npm run test:coverage   # pruebas + cobertura (genera coverage/lcov.info)
+```
+
+Las pruebas del CRUD de mascotas están en `tests/mascotas/` y usan los helpers de `tests/helpers/`.
+
+**Alcance y limitaciones:** la capa de base de datos se reemplaza por un doble de prueba, por lo que estos tests verifican rutas, validaciones, parámetros SQL y códigos HTTP. **No comprueban persistencia real en PostgreSQL**; eso requiere una prueba de integración contra una base de pruebas dedicada (nunca la de producción).

@@ -5,7 +5,10 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "test": "node --test --test-reporter=spec \"tests/**/*.test.js\"",
+    "pretest:coverage": "node -e \"require('fs').mkdirSync('coverage',{recursive:true})\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"tests/**\" --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info \"tests/**/*.test.js\""
   },
   "keywords": [
     "express",
