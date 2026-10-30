@@ -51,12 +51,13 @@ function useTestApp() {
         return next || { rows: [] };
       };
     },
-    async request(method, path, body) {
+    async request(method, path, body, headers = {}) {
       const options = { method, headers: {} };
       if (body !== undefined) {
         options.headers['Content-Type'] = 'application/json';
         options.body = JSON.stringify(body);
       }
+      Object.assign(options.headers, headers);
       const response = await fetch(`${baseUrl}${path}`, options);
       return { status: response.status, body: await response.json() };
     },
