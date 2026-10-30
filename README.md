@@ -8,15 +8,17 @@ Detalle completo en [`docs/EVALUACION.md`](docs/EVALUACION.md).
 # adopcionanimalbackend2
 ## Pruebas automatizadas
 
-Usan el runner nativo de Node (`node:test`, Node 22+), sin dependencias nuevas.
+Usan el runner nativo de Node (`node:test`, Node 18+), sin dependencias nuevas.
 
 ```bash
 npm test                # ejecuta todas las pruebas
 npm run test:coverage   # pruebas + cobertura (genera coverage/lcov.info)
 ```
 
-Las pruebas están organizadas por funcionalidad en `tests/mascotas/`, `tests/auth/` y `tests/solicitudes/`, y usan los helpers de `tests/helpers/`. Los tokens y usuarios de autenticación son ficticios y se firman con un secreto exclusivo de pruebas.
+Las pruebas están organizadas por funcionalidad en `tests/mascotas/`, `tests/auth/`, `tests/solicitudes/`, `tests/historial/` y `tests/health/`, y usan los helpers de `tests/helpers/`. Los tokens y usuarios de autenticación son ficticios y se firman con un secreto exclusivo de pruebas.
 
 **Alcance y limitaciones:** la capa de base de datos se reemplaza por un doble de prueba, por lo que estos tests verifican rutas, validaciones, parámetros SQL y códigos HTTP. **No comprueban persistencia real en PostgreSQL**; eso requiere una prueba de integración contra una base de pruebas dedicada (nunca la de producción).
 
-Actualmente no hay rutas de registro de usuarios ni de historial clínico en la API; por eso esas operaciones no están cubiertas por tests y requieren endpoints implementados antes de poder probarlas sin alterar el alcance de negocio.
+El historial clínico está implementado para usuarios ADMIN y tiene pruebas de lectura, creación, actualización, eliminación, validación y autorización. La API permite iniciar sesión, pero actualmente **no cuenta con una ruta de registro de usuarios**.
+
+El resultado y las limitaciones de la verificación integral están en [`docs/VERIFICACION_API_EXPRESS.md`](docs/VERIFICACION_API_EXPRESS.md).
