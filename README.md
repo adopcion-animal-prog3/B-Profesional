@@ -15,6 +15,8 @@ npm test                # ejecuta todas las pruebas
 npm run test:coverage   # pruebas + cobertura (genera coverage/lcov.info)
 ```
 
-Las pruebas del CRUD de mascotas están en `tests/mascotas/` y usan los helpers de `tests/helpers/`.
+Las pruebas están organizadas por funcionalidad en `tests/mascotas/`, `tests/auth/` y `tests/solicitudes/`, y usan los helpers de `tests/helpers/`. Los tokens y usuarios de autenticación son ficticios y se firman con un secreto exclusivo de pruebas.
 
 **Alcance y limitaciones:** la capa de base de datos se reemplaza por un doble de prueba, por lo que estos tests verifican rutas, validaciones, parámetros SQL y códigos HTTP. **No comprueban persistencia real en PostgreSQL**; eso requiere una prueba de integración contra una base de pruebas dedicada (nunca la de producción).
+
+Actualmente no hay rutas de registro de usuarios ni de historial clínico en la API; por eso esas operaciones no están cubiertas por tests y requieren endpoints implementados antes de poder probarlas sin alterar el alcance de negocio.
