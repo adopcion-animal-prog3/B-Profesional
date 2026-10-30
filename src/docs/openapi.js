@@ -17,7 +17,6 @@ const openApiSpec = {
     { name: 'Mascotas', description: 'Gestión de mascotas y historial clínico' },
     { name: 'Solicitudes', description: 'Solicitudes de adopción' },
   ],
-  security: [{ bearerAuth: [] }],
   components: {
     securitySchemes: {
       bearerAuth: {
@@ -502,8 +501,13 @@ const openApiSpec = {
                   type: 'object',
                   properties: {
                     status: { type: 'string', enum: ['success'] },
-                    data: { $ref: '#/components/schemas/Mascota' },
-                    message: { type: 'string', example: 'Mascota deleted successfully' },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        message: { type: 'string', example: 'Mascota deleted successfully' },
+                        data: { $ref: '#/components/schemas/Mascota' },
+                      },
+                    },
                   },
                 },
               },
@@ -609,7 +613,26 @@ const openApiSpec = {
         security: [{ bearerAuth: [] }],
         parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
         responses: {
-          200: { description: 'Registro eliminado', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['success'] }, data: { $ref: '#/components/schemas/HistorialClinico' }, message: { type: 'string', example: 'Historial clinico deleted successfully' } } } } } },
+          200: {
+            description: 'Registro eliminado',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string', enum: ['success'] },
+                    data: {
+                      type: 'object',
+                      properties: {
+                        message: { type: 'string', example: 'Historial clinico deleted successfully' },
+                        data: { $ref: '#/components/schemas/HistorialClinico' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
           400: { $ref: '#/components/responses/BadRequest' },
           401: { $ref: '#/components/responses/Unauthorized' },
           403: { $ref: '#/components/responses/Forbidden' },
