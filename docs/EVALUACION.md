@@ -148,7 +148,7 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 | Criterio | Resultado actual | Meta | Brecha | Cómo alcanzarlo |
 |---|---|---|---|---|
-| Duplicación (DRY) (duplicacion) | **19.8%** de duplicación | máximo 15% | sobran 4.8 pts | Ubicá los bloques repetidos (el anexo lista los archivos), llevá la lógica común a una función o módulo compartido y hacé que todos lo usen. Cada copia eliminada baja el porcentaje; meta ≤15%. |
+| Duplicación (DRY) (duplicacion) | **19.8%** de duplicación | máximo 15% | sobran 4.8 pts | Ubicá los bloques repetidos con `jscpd` o SonarQube, llevá la lógica común a una función o módulo compartido y hacé que todos lo usen. Cada copia eliminada baja el porcentaje; meta ≤15%. |
 
 ## 6. Anexo: dónde mirar
 
