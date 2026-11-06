@@ -1,4 +1,5 @@
 const { query } = require('../config/database');
+const logger = require('../utils/logger');
 
 const DB_PROBE_TIMEOUT_MS = 2000;
 const DB_PROBE_SQL = 'SELECT 1 AS ok, NOW() AS current_time';
@@ -32,7 +33,7 @@ const checkDatabaseHealth = async () => {
   }
 
   if (!outcome.ok) {
-    console.error('Health check de PostgreSQL fallo:', outcome.error?.code || 'UNKNOWN_ERROR');
+    logger.error(`Health check de PostgreSQL falló: ${outcome.error?.message || outcome.error?.code || 'UNKNOWN_ERROR'}`);
     return { available: false, databaseTime: null };
   }
 

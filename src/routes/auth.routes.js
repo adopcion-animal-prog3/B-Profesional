@@ -6,6 +6,7 @@ const authenticateToken = require('../middleware/auth.middleware');
 const requireRole = require('../middleware/role.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -56,7 +57,7 @@ router.post(
 
     const jwtSecret = process.env.JWT_SECRET;
     if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
-      console.error('JWT_SECRET is not configured');
+      logger.error('JWT_SECRET no está configurado');
       return res.status(500).json(errorResponse('Authentication service is not configured'));
     }
 
@@ -71,7 +72,7 @@ router.post(
       try {
         passwordMatches = await bcrypt.compare(password, user.password_hash);
       } catch (error) {
-        console.warn('Stored password hash is invalid for user:', user.id, error.message);
+        logger.warn(`Hash de contraseña almacenado inválido para el usuario ${user.id}: ${error.message}`);
       }
     }
 
