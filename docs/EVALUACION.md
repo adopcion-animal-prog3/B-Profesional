@@ -151,7 +151,71 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 |---|---|---|---|---|
 | Duplicación (DRY) (duplicacion) | **19.8%** de duplicación | máximo 15% | sobran 4.8 pts | Ubicá los bloques repetidos con `jscpd` o SonarQube, llevá la lógica común a una función o módulo compartido y hacé que todos lo usen. Cada copia eliminada baja el porcentaje; meta ≤15%. |
 
-## 6. Anexo: dónde mirar
+## 6. Actividad en clase (miércoles y viernes)
+
+> Se consideran las **23 clases** del período (miércoles y viernes; Nov 4 y 6 quedan afuera porque el calendario las marca sin clase). `Commits` = commits de trabajo (no-merge); `Merges` = merges de PR (también son push). Los días sin actividad dicen **sin actividad**.
+
+### Juan Ignacio Cruzado
+
+**13/23 clases con actividad** · 43 commits · 27 merges
+
+| Fecha | Marca | Repositorios | Commits / merges |
+|---|:--:|---|--:|
+| 2026-08-14 | **Sí** | B-Profesional, F-profesional | 2 / 0 |
+| 2026-08-19 | No | sin actividad | 0 / 0 |
+| 2026-08-21 | No | sin actividad | 0 / 0 |
+| 2026-08-26 | No | sin actividad | 0 / 0 |
+| 2026-08-28 | No | sin actividad | 0 / 0 |
+| 2026-09-02 | **Sí** | B-Profesional | 2 / 1 |
+| 2026-09-04 | **Sí** | B-Profesional | 1 / 1 |
+| 2026-09-09 | **Sí** | B-Profesional | 4 / 3 |
+| 2026-09-11 | No | sin actividad | 0 / 0 |
+| 2026-09-16 | No | sin actividad | 0 / 0 |
+| 2026-09-18 | No | sin actividad | 0 / 0 |
+| 2026-09-23 | **Sí** | B-Profesional | 0 / 1 |
+| 2026-09-25 | No | sin actividad | 0 / 0 |
+| 2026-09-30 | No | sin actividad | 0 / 0 |
+| 2026-10-02 | **Sí** | B-Profesional | 2 / 3 |
+| 2026-10-07 | **Sí** | B-Profesional, F-profesional | 6 / 3 |
+| 2026-10-09 | **Sí** | B-Profesional | 3 / 4 |
+| 2026-10-14 | **Sí** | B-Profesional, F-profesional | 10 / 6 |
+| 2026-10-16 | **Sí** | B-Profesional, F-profesional | 6 / 3 |
+| 2026-10-21 | **Sí** | B-Profesional | 1 / 1 |
+| 2026-10-23 | No | sin actividad | 0 / 0 |
+| 2026-10-28 | **Sí** | B-Profesional, F-profesional | 4 / 1 |
+| 2026-10-30 | **Sí** | B-Profesional | 2 / 0 |
+
+### juanmasecchi
+
+**10/23 clases con actividad** · 27 commits · 39 merges
+
+| Fecha | Marca | Repositorios | Commits / merges |
+|---|:--:|---|--:|
+| 2026-08-14 | No | sin actividad | 0 / 0 |
+| 2026-08-19 | No | sin actividad | 0 / 0 |
+| 2026-08-21 | No | sin actividad | 0 / 0 |
+| 2026-08-26 | **Sí** | B-Profesional, F-profesional | 3 / 0 |
+| 2026-08-28 | No | sin actividad | 0 / 0 |
+| 2026-09-02 | No | sin actividad | 0 / 0 |
+| 2026-09-04 | No | sin actividad | 0 / 0 |
+| 2026-09-09 | No | sin actividad | 0 / 0 |
+| 2026-09-11 | No | sin actividad | 0 / 0 |
+| 2026-09-16 | No | sin actividad | 0 / 0 |
+| 2026-09-18 | No | sin actividad | 0 / 0 |
+| 2026-09-23 | **Sí** | B-Profesional, F-profesional | 6 / 5 |
+| 2026-09-25 | **Sí** | B-Profesional | 3 / 2 |
+| 2026-09-30 | **Sí** | B-Profesional, F-profesional | 8 / 9 |
+| 2026-10-02 | **Sí** | F-profesional | 7 / 7 |
+| 2026-10-07 | **Sí** | F-profesional | 0 / 3 |
+| 2026-10-09 | No | sin actividad | 0 / 0 |
+| 2026-10-14 | **Sí** | F-profesional | 0 / 4 |
+| 2026-10-16 | **Sí** | F-profesional | 0 / 4 |
+| 2026-10-21 | No | sin actividad | 0 / 0 |
+| 2026-10-23 | No | sin actividad | 0 / 0 |
+| 2026-10-28 | **Sí** | F-profesional | 0 / 3 |
+| 2026-10-30 | **Sí** | B-Profesional | 0 / 2 |
+
+## 7. Anexo: dónde mirar
 
 _No hay criterios en rojo con archivos asociados._
 
