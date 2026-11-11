@@ -11,12 +11,12 @@
 |---|---|
 | Tipo de proyecto | backend |
 | Índice de calidad de servicios | **50/100** (mínimo 50) |
-| Criterios cumplidos | **14/15** |
-| Aprobado (semáforo) | **SI** |
-| Código (LOC) | 1,552 |
-| Archivos de código | 16 |
-| Tests (archivos) | 12 |
-| Cobertura de líneas | 91.0% (mínimo 80%) |
+| Criterios cumplidos | **13/15** |
+| Aprobado (semáforo) | **NO** |
+| Código (LOC) | 2,094 |
+| Archivos de código | 20 |
+| Tests (archivos) | 13 |
+| Cobertura de líneas | 61.3% (mínimo 80%) |
 | Capas detectadas | presentacion, logica, datos |
 | Pushes directos a `main` (sin PR) | 0 |
 | Tope por duplicación | `DUP>=15%` → índice ≤ 50 |
@@ -27,12 +27,13 @@
 
 | Autor | Commits | Código (LOC) | Tests (LOC) | Docs (LOC) | Días activos | % del código |
 |---|---:|---:|---:|---:|---:|---:|
-| Juan Ignacio Cruzado | 27 | 1,826 | 732 | 288 | 13 | 94% |
-| juanmasecchi | 6 | 114 | 0 | 0 | 4 | 6% |
+| Juan Ignacio Cruzado | 27 | 1,816 | 732 | 288 | 13 | 63% |
+| Juan Martín Rodríguez Secchi | 2 | 958 | 0 | 0 | 1 | 33% |
+| juanmasecchi | 6 | 106 | 0 | 0 | 5 | 4% |
 
 > _El LOC de autoría lo calcula RepoSense sobre el historial y puede diferir del LOC de código del análisis de calidad (que mira solo el estado de `main`)._
 
-> **Reparto del trabajo:** Juan Ignacio Cruzado concentra el 94% de las líneas de código. Un reparto muy desigual suele indicar que la integración no fue realmente en equipo; vale la pena reconstruir cómo se coordinó.
+> **Reparto del trabajo:** Juan Ignacio Cruzado concentra el 63% de las líneas de código. Un reparto muy desigual suele indicar que la integración no fue realmente en equipo; vale la pena reconstruir cómo se coordinó.
 
 ## 3. Constancia (IC) — todas las ramas
 
@@ -40,8 +41,9 @@
 
 | Alumno | Sesiones | Cumplimiento | Pausa | Recencia | IC | Nivel | Para subir de nivel |
 |---|--:|--:|--:|--:|--:|--|--|
-| Juan Ignacio Cruzado | 11 | 48% | 23 d | 14% | **33** | No aprueba | Cumplimiento 48% (mín. 50%); Recencia 14% (mín. 50%) |
-| juanmasecchi | 5 | 22% | 28 d | 0% | **14** | No aprueba | Cumplimiento 22% (mín. 50%); Recencia 0% (mín. 50%) |
+| Juan Ignacio Cruzado | 11 | 43% | 23 d | 14% | **30** | No aprueba | Cumplimiento 43% (mín. 50%); Recencia 14% (mín. 50%) |
+| Juan Martín Rodríguez Secchi | 1 | 4% | 0 d | 64% | **33** | Muestra insuficiente | ≥3 sesiones y ≥2 semanas de período |
+| juanmasecchi | 5 | 19% | 28 d | 0% | **13** | No aprueba | Cumplimiento 19% (mín. 50%); Recencia 0% (mín. 50%) |
 
 > Para aprobar el IC: **2 sesiones por semana** sostenidas, sin pausas mayores a **10 días** y con actividad en las **últimas 2 semanas**. Se excluyen merges, bots y al docente. Zona horaria UTC-3.
 
@@ -59,7 +61,7 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 - **Qué mide:** Porcentaje de bloques de código repetidos (similitud) en el repositorio.
 - **Por qué importa:** Cada copia se mantiene por separado: un arreglo hay que repetirlo y los defectos se multiplican.
-- **Tu resultado:** **19.8%** de duplicación _(máximo 15%)_
+- **Tu resultado:** **16.3%** de duplicación _(máximo 15%)_
 - **Para investigar la causa:**
     - ¿El trabajo se repartió por pantallas o archivos y se integró copiando y pegando bloques?
     - ¿Qué zonas del sistema cambiaron juntas más de una vez (señal de lógica compartida)?
@@ -117,13 +119,13 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 - **Qué mide:** Complejidad ciclomática: cantidad de caminos posibles dentro de una función (condicionales, bucles, casos).
 - **Por qué importa:** Muchos caminos = difícil de seguir y de probar; suelen esconderse casos sin cubrir.
-- **Tu resultado:** **2** bloque(s) de complejidad alta _(máximo 5 por 1000 LOC (tenés 1552 LOC))_
+- **Tu resultado:** **8** bloque(s) de complejidad alta _(máximo 5 por 1000 LOC (tenés 2094 LOC))_
 
 ### 12. Funciones/métodos largos o con muchos parámetros (Tam) — OK
 
 - **Qué mide:** Tamaño de las funciones/métodos y cantidad de parámetros.
 - **Por qué importa:** Una función que hace varias cosas cuesta leerla, nombrarla y reutilizarla.
-- **Tu resultado:** **2** función/método(s) largos o con muchos parámetros _(máximo 10 por 1000 LOC)_
+- **Tu resultado:** **8** función/método(s) largos o con muchos parámetros _(máximo 10 por 1000 LOC)_
 
 ### 13. Acoplamiento alto (Acop) — OK
 
@@ -131,11 +133,15 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 - **Por qué importa:** Piezas muy enlazadas hacen que un cambio se propague y que sea difícil reemplazar partes.
 - **Tu resultado:** **0** unidad(es) con acoplamiento alto _(máximo 2 por 1000 LOC)_
 
-### 14. Cobertura de tests (Cob) — OK
+### 14. Cobertura de tests (Cob) — A REVISAR
 
 - **Qué mide:** Porcentaje de líneas de código ejecutadas por la suite de tests (cobertura real, no cantidad de archivos de test).
 - **Por qué importa:** Un test que existe pero no ejecuta el código no protege de nada: la cobertura muestra qué partes quedan sin verificar.
-- **Tu resultado:** **91.0%** de líneas cubiertas · fuente: ejecución: c8 _(mínimo 80% de líneas)_
+- **Tu resultado:** **61.3%** de líneas cubiertas · fuente: ejecución: c8 _(mínimo 80% de líneas)_
+- **Para investigar la causa:**
+    - ¿Qué módulos o ramas del sistema nunca se ejecutan en los tests?
+    - ¿Los tests prueban el camino principal y los errores, o solo el caso feliz?
+    - ¿La suite se puede correr en CI sin base de datos ni servicios externos?
 
 ### 15. Endpoints del backend (EP) — OK
 
@@ -145,19 +151,22 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 ## 5. Observaciones y qué falta
 
-**Aprobado con observaciones.** Estos criterios quedan en rojo (se permiten hasta **3** sin que sean compuertas críticas), así que no bloquean la aprobación pero conviene corregirlos:
+Criterios que hoy están en rojo y, para cada uno, una explicación breve de **cómo corregirlo** hasta alcanzar el nivel de aprobación (perfil `exigente`):
 
 | Criterio | Resultado actual | Meta | Brecha | Cómo alcanzarlo |
 |---|---|---|---|---|
-| Duplicación (DRY) (duplicacion) | **19.8%** de duplicación | máximo 15% | sobran 4.8 pts | Ubicá los bloques repetidos con `jscpd` o SonarQube, llevá la lógica común a una función o módulo compartido y hacé que todos lo usen. Cada copia eliminada baja el porcentaje; meta ≤15%. |
+| Duplicación (DRY) (duplicacion) | **16.3%** de duplicación | máximo 15% | sobran 1.3 pts | Ubicá los bloques repetidos con `jscpd` o SonarQube, llevá la lógica común a una función o módulo compartido y hacé que todos lo usen. Cada copia eliminada baja el porcentaje; meta ≤15%. |
+| Cobertura de tests (Cob) | **61.3%** de líneas cubiertas · fuente: ejecución: c8 | mínimo 80% de líneas | faltan 18.7 pts | Agregá o ampliá tests que ejecuten los módulos sin cubrir (camino principal y errores) y publicá el artefacto (`coverage/lcov.info`, `coverage-summary.json`, `coverage.xml` o `coverage.json`) o corré la suite con coverage. Meta: ≥80% de líneas. |
+
+> Empezá por las señales de seguridad (**SEC**, **SQL**) y por la **duplicación**: son las que más pesan en el índice y las más rápidas de verificar a ojo. Después de corregir, volvé a correr la medición: el semáforo se recalcula sobre `main`.
 
 ## 6. Actividad en clase (miércoles y viernes)
 
-> Se consideran las **23 clases** del período (miércoles y viernes, según `config/constancia.json`; feriados y semanas sin clase descontados). `Commits` = commits de trabajo (no-merge); `Merges` = merges de PR (también son push). Los días sin actividad dicen **sin actividad**.
+> Se consideran las **26 clases** del período (miércoles y viernes, según `config/constancia.json`; feriados y semanas sin clase descontados). `Commits` = commits de trabajo (no-merge); `Merges` = merges de PR (también son push). Los días sin actividad dicen **sin actividad**.
 
 ### Juan Ignacio Cruzado
 
-**13/23 clases con actividad** · 43 commits · 27 merges
+**13/26 clases con actividad** · 43 commits · 27 merges
 
 | Fecha | Actividad | Repositorios | Commits / merges |
 |---|:--:|---|--:|
@@ -184,10 +193,46 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 | 2026-10-23 | No | sin actividad | 0 / 0 |
 | 2026-10-28 | **Sí** | B-Profesional, F-profesional | 4 / 1 |
 | 2026-10-30 | **Sí** | B-Profesional | 2 / 0 |
+| 2026-11-04 | No | sin actividad | 0 / 0 |
+| 2026-11-06 | No | sin actividad | 0 / 0 |
+| 2026-11-11 | No | sin actividad | 0 / 0 |
+
+### Juan Martín Rodríguez Secchi
+
+**1/26 clases con actividad** · 3 commits · 0 merges
+
+| Fecha | Actividad | Repositorios | Commits / merges |
+|---|:--:|---|--:|
+| 2026-08-14 | No | sin actividad | 0 / 0 |
+| 2026-08-19 | No | sin actividad | 0 / 0 |
+| 2026-08-21 | No | sin actividad | 0 / 0 |
+| 2026-08-26 | No | sin actividad | 0 / 0 |
+| 2026-08-28 | No | sin actividad | 0 / 0 |
+| 2026-09-02 | No | sin actividad | 0 / 0 |
+| 2026-09-04 | No | sin actividad | 0 / 0 |
+| 2026-09-09 | No | sin actividad | 0 / 0 |
+| 2026-09-11 | No | sin actividad | 0 / 0 |
+| 2026-09-16 | No | sin actividad | 0 / 0 |
+| 2026-09-18 | No | sin actividad | 0 / 0 |
+| 2026-09-23 | No | sin actividad | 0 / 0 |
+| 2026-09-25 | No | sin actividad | 0 / 0 |
+| 2026-09-30 | No | sin actividad | 0 / 0 |
+| 2026-10-02 | No | sin actividad | 0 / 0 |
+| 2026-10-07 | No | sin actividad | 0 / 0 |
+| 2026-10-09 | No | sin actividad | 0 / 0 |
+| 2026-10-14 | No | sin actividad | 0 / 0 |
+| 2026-10-16 | No | sin actividad | 0 / 0 |
+| 2026-10-21 | No | sin actividad | 0 / 0 |
+| 2026-10-23 | No | sin actividad | 0 / 0 |
+| 2026-10-28 | No | sin actividad | 0 / 0 |
+| 2026-10-30 | No | sin actividad | 0 / 0 |
+| 2026-11-04 | No | sin actividad | 0 / 0 |
+| 2026-11-06 | **Sí** | B-Profesional, F-profesional | 3 / 0 |
+| 2026-11-11 | No | sin actividad | 0 / 0 |
 
 ### juanmasecchi
 
-**10/23 clases con actividad** · 27 commits · 39 merges
+**11/26 clases con actividad** · 27 commits · 41 merges
 
 | Fecha | Actividad | Repositorios | Commits / merges |
 |---|:--:|---|--:|
@@ -204,7 +249,7 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 | 2026-09-18 | No | sin actividad | 0 / 0 |
 | 2026-09-23 | **Sí** | B-Profesional, F-profesional | 6 / 5 |
 | 2026-09-25 | **Sí** | B-Profesional | 3 / 2 |
-| 2026-09-30 | **Sí** | B-Profesional, F-profesional | 8 / 9 |
+| 2026-09-30 | **Sí** | B-Profesional, F-profesional | 8 / 8 |
 | 2026-10-02 | **Sí** | F-profesional | 7 / 7 |
 | 2026-10-07 | **Sí** | F-profesional | 0 / 3 |
 | 2026-10-09 | No | sin actividad | 0 / 0 |
@@ -214,10 +259,13 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 | 2026-10-23 | No | sin actividad | 0 / 0 |
 | 2026-10-28 | **Sí** | F-profesional | 0 / 3 |
 | 2026-10-30 | **Sí** | B-Profesional | 0 / 2 |
+| 2026-11-04 | No | sin actividad | 0 / 0 |
+| 2026-11-06 | No | sin actividad | 0 / 0 |
+| 2026-11-11 | **Sí** | B-Profesional, F-profesional | 0 / 3 |
 
 ## 7. Anexo: dónde mirar
 
-_No hay criterios en rojo con archivos asociados._
+Archivos donde el análisis encontró cada señal en rojo (sin número de línea, a propósito):
 
 ---
 _Informe generado por la cátedra. Los umbrales corresponden al perfil `exigente`. Ante dudas, revisá el archivo señalado y el criterio en `CRITERIOS-CALIDAD.md`._
