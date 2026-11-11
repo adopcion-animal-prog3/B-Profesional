@@ -1,0 +1,102 @@
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { query } = require('../config/database');
+const authenticateToken = require('../middleware/auth.middleware');
+const requireRole = require('../middleware/role.middleware');
+const asyncHandler = require('../utils/asyncHandler');
+const { successResponse, errorResponse } = require('../utils/apiResponse');
+const logger = require('../utils/logger');
+
+const router = express.Router();
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const INVALID_CREDENTIALS = 'Invalid email or password';
+
+const getPublicUser = (user) => ({
+  id: user.id,
+  nombre: user.nombre,
+  email: user.email,
+  rol: user.rol,
+});
+
+router.get('/api/auth/validate-token', authenticateToken, (req, res) => {
+  return res.status(200).json(successResponse({ user: req.user }));
+});
+
+// Route to test ADMIN-only access
+router.get('/api/auth/admin-only', authenticateToken, requireRole('ADMIN'), (req, res) => {
+  return res.status(200).json(successResponse({ message: 'admin access granted' }));
+});
+
+// Route to test ADOPTANTE-only access
+router.get('/api/auth/adoptante-only', authenticateToken, requireRole('ADOPTANTE'), (req, res) => {
+  return res.status(200).json(successResponse({ message: 'adoptante access granted' }));
+});
+
+router.post(
+  '/api/auth/login',
+  asyncHandler(async (req, res) => {
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return res.status(400).json(errorResponse('Email and password are required'));
+    }
+
+    const { email, password } = body;
+    const normalizedEmail = typeof email === 'string' ? email.trim() : '';
+
+    if (
+      typeof email !== 'string' ||
+      normalizedEmail === '' ||
+      normalizedEmail.length > 255 ||
+      !EMAIL_PATTERN.test(normalizedEmail) ||
+      typeof password !== 'string' ||
+      password.trim().length === 0
+    ) {
+      return res.status(400).json(errorResponse('Email and password are required'));
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (typeof jwtSecret !== 'string' || jwtSecret.trim() === '') {
+      logger.error('JWT_SECRET no está configurado');
+      return res.status(500).json(errorResponse('Authentication service is not configured'));
+    }
+
+    const result = await query(
+      'SELECT id, nombre, email, rol, password_hash FROM usuarios WHERE LOWER(email) = $1',
+      [normalizedEmail.toLowerCase()]
+    );
+    const user = result.rows[0];
+
+    let passwordMatches = false;
+    if (typeof user?.password_hash === 'string') {
+      try {
+        passwordMatches = await bcrypt.compare(password, user.password_hash);
+      } catch (error) {
+        logger.warn(`Hash de contraseña almacenado inválido para el usuario ${user.id}: ${error.message}`);
+      }
+    }
+
+    if (!user || !passwordMatches) {
+      return res.status(401).json(errorResponse(INVALID_CREDENTIALS));
+    }
+
+    const tokenPayload = {
+      id: user.id,
+      email: user.email,
+      rol: user.rol,
+    };
+
+    const token = jwt.sign(tokenPayload, jwtSecret, {
+      subject: String(user.id),
+      expiresIn: '1h',
+      algorithm: 'HS256',
+    });
+
+    return res.status(200).json(successResponse({
+      token,
+      user: getPublicUser(user),
+    }));
+  })
+);
+
+module.exports = router;

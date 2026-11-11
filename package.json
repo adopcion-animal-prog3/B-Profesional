@@ -1,0 +1,29 @@
+{
+  "name": "b-profesional",
+  "version": "1.0.0",
+  "description": "Backend base del proyecto B-profesional",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test --test-reporter=spec tests",
+    "pretest:coverage": "node -e \"require('fs').mkdirSync('coverage',{recursive:true})\"",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"tests/**\" --test-reporter=spec --test-reporter-destination=stdout --test-reporter=lcov --test-reporter-destination=coverage/lcov.info \"tests/**/*.test.js\""
+  },
+  "keywords": [
+    "express",
+    "backend",
+    "node"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.13.0",
+    "pg-mem": "^3.0.14"
+  }
+}
