@@ -5,7 +5,11 @@
 Detalle completo en [`docs/EVALUACION.md`](docs/EVALUACION.md).
 <!-- calidad:fin -->
 
-# adopcionanimalbackend2
+# B-personal
+
+En este repositorio se realizara el backend para todos aquellos usuarios libres 
+
+# INFO:
 ## Pruebas automatizadas
 
 Usan el runner nativo de Node (`node:test`, Node 18+), sin dependencias nuevas.
