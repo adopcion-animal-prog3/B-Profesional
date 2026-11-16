@@ -3,7 +3,7 @@
 
 > Documento **generado automáticamente** por la cátedra de Programación III (RepoSense + análisis de calidad + constancia). **No editar a mano**: se regenera en cada evaluación.
 > Rama evaluada: `main`. Análisis **heurístico** (regex + métricas): es una criba para orientar la revisión, **no una nota**.
-> Generado: 2026-11-14.
+> Generado: 2026-11-16.
 
 ## 1. Veredicto
 
@@ -41,8 +41,8 @@
 
 | Alumno | Sesiones | Cumplimiento | Pausa | Recencia | IC | Nivel | Para subir de nivel |
 |---|--:|--:|--:|--:|--:|--|--|
-| Juan Ignacio Cruzado | 11 | 42% | 23 d | 0% | **27** | No aprueba | Cumplimiento 42% (mín. 50%); Recencia 0% (mín. 50%) |
-| Juan Martín Rodríguez Secchi | 1 | 4% | 0 d | 50% | **30** | Muestra insuficiente | ≥3 sesiones y ≥2 semanas de período |
+| Juan Ignacio Cruzado | 11 | 41% | 23 d | 0% | **26** | No aprueba | Cumplimiento 41% (mín. 50%); Recencia 0% (mín. 50%) |
+| Juan Martín Rodríguez Secchi | 1 | 4% | 0 d | 29% | **27** | Muestra insuficiente | ≥3 sesiones y ≥2 semanas de período |
 | juanmasecchi | 5 | 19% | 28 d | 0% | **12** | No aprueba | Cumplimiento 19% (mín. 50%); Recencia 0% (mín. 50%) |
 
 > Para aprobar el IC: **2 sesiones por semana** sostenidas, sin pausas mayores a **10 días** y con actividad en las **últimas 2 semanas**. Se excluyen merges, bots y al docente. Zona horaria UTC-3.
@@ -198,7 +198,11 @@ Criterios que hoy están en rojo y, para cada uno, una explicación breve de **c
 | 2026-11-11 | No | sin actividad | 0 / 0 |
 | 2026-11-13 | No | sin actividad | 0 / 0 |
 
-**Fuera de clase:** sin actividad registrada.
+**Fuera de clase:** 1 fecha(s) con actividad · 0 commits · 2 merges
+
+| Fecha | Repositorios | Commits / merges |
+|---|---|--:|
+| 2026-11-15 | B-Profesional, F-profesional | 0 / 2 |
 
 ### Juan Martín Rodríguez Secchi
 
@@ -238,7 +242,7 @@ Criterios que hoy están en rojo y, para cada uno, una explicación breve de **c
 
 ### juanmasecchi
 
-**12/27 clases con actividad** · total del período: 27 commits · 41 merges
+**11/27 clases con actividad** · total del período: 27 commits · 40 merges
 
 | Fecha | Actividad | Repositorios | Commits / merges |
 |---|:--:|---|--:|
@@ -268,9 +272,13 @@ Criterios que hoy están en rojo y, para cada uno, una explicación breve de **c
 | 2026-11-04 | No | sin actividad | 0 / 0 |
 | 2026-11-06 | No | sin actividad | 0 / 0 |
 | 2026-11-11 | **Sí** | B-Profesional, F-profesional | 0 / 2 |
-| 2026-11-13 | **Sí** | B-Profesional | 0 / 1 |
+| 2026-11-13 | No | sin actividad | 0 / 0 |
 
-**Fuera de clase:** sin actividad registrada.
+**Fuera de clase:** 1 fecha(s) con actividad · 0 commits · 1 merges
+
+| Fecha | Repositorios | Commits / merges |
+|---|---|--:|
+| 2026-11-14 | B-Profesional | 0 / 1 |
 
 ## 7. Anexo: dónde mirar
 
