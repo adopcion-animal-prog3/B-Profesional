@@ -24,7 +24,12 @@ async function start() {
   return server;
 }
 
-start().catch((error) => {
-  logger.error(`Error al iniciar: ${error.message}`);
-  process.exitCode = 1;
-});
+// Solo arranca cuando se ejecuta directamente (node scripts/start.js); los tests importan `start`.
+if (require.main === module) {
+  start().catch((error) => {
+    logger.error(`Error al iniciar: ${error.message}`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { start };
