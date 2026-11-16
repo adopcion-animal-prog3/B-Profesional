@@ -132,4 +132,4 @@ async function seedDatabase(queryFn) {
   return { seeded: true, demoPassword: DEMO_PASSWORD };
 }
 
-module.exports = { seedDatabase, demoUsers, demoPets };
+module.exports = { seedDatabase, demoUsers, demoPets, DEMO_PASSWORD };

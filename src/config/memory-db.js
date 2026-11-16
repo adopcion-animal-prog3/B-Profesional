@@ -4,8 +4,6 @@
  * sin necesidad de PostgreSQL externo.
  */
 
-const { parse } = require('path');
-
 const tables = {};
 let sequences = {};
 
@@ -116,7 +114,8 @@ function handleSelect(sql, params) {
   const upper = sql.toUpperCase();
 
   // SELECT COUNT(*) AS count FROM tabla
-  const countMatch = upper.match(/SELECT\s+COUNT\(\*\)\s+AS\s+(\w+)\s+FROM\s+(\w+)/);
+  // Se busca sobre el SQL original para conservar el alias tal como lo escribió la consulta.
+  const countMatch = sql.match(/SELECT\s+COUNT\(\*\)\s+AS\s+(\w+)\s+FROM\s+(\w+)/i);
   if (countMatch) {
     const table = countMatch[2];
     ensureTable(table);
@@ -125,7 +124,8 @@ function handleSelect(sql, params) {
   }
 
   // SELECT ... FROM tabla WHERE id = $1
-  const selectById = sql.match(/SELECT\s+(.+?)\s+FROM\s+(\w+)\s+WHERE\s+(\w+)\s*=\s*\$(\d+)/i);
+  // Atajo sólo para la búsqueda exacta por id; el resto de los filtros devuelve todas las coincidencias.
+  const selectById = sql.match(/SELECT\s+(.+?)\s+FROM\s+(\w+)\s+WHERE\s+(id)\s*=\s*\$(\d+)\s*$/i);
   if (selectById) {
     const columns = selectById[1].split(',').map(c => c.trim());
     const table = selectById[2];
@@ -246,6 +246,22 @@ function projectColumns(row, columns) {
   return result;
 }
 
+// Convierte un valor SQL ($n, NOW(), 'texto' o literal) en su valor real.
+function resolveValue(token, params) {
+  if (token.startsWith('$')) return params[Number(token.substring(1)) - 1];
+  if (token === 'NOW()') return new Date().toISOString();
+  if (token.startsWith("'") && token.endsWith("'")) return token.slice(1, -1);
+  return token;
+}
+
+function buildRow(columns, placeholders, params) {
+  const row = {};
+  columns.forEach((column, i) => {
+    row[column] = resolveValue(placeholders[i], params);
+  });
+  return row;
+}
+
 function handleInsert(sql, params) {
   // Normalizar saltos de línea y espacios
   sql = sql.replace(/\s+/g, ' ').trim();
@@ -259,21 +275,7 @@ function handleInsert(sql, params) {
     const returningCols = returningMatch[4].split(',').map(c => c.trim());
 
     ensureTable(table);
-    const row = {};
-    for (let i = 0; i < columns.length; i++) {
-      let ph = placeholders[i];
-      if (ph.startsWith('$')) {
-        const idx = Number(ph.substring(1)) - 1;
-        row[columns[i]] = params[idx];
-      } else if (ph === "NOW()") {
-        row[columns[i]] = new Date().toISOString();
-      } else if (ph.startsWith("'") && ph.endsWith("'")) {
-        row[columns[i]] = ph.slice(1, -1);
-      } else {
-        row[columns[i]] = ph;
-      }
-    }
-    const inserted = insertRow(table, row);
+    const inserted = insertRow(table, buildRow(columns, placeholders, params));
     const projected = projectColumns(inserted, returningCols);
     return { rows: [projected], rowCount: 1 };
   }
@@ -286,21 +288,7 @@ function handleInsert(sql, params) {
     const placeholders = simpleMatch[3].split(',').map(c => c.trim());
 
     ensureTable(table);
-    const row = {};
-    for (let i = 0; i < columns.length; i++) {
-      let ph = placeholders[i];
-      if (ph.startsWith('$')) {
-        const idx = Number(ph.substring(1)) - 1;
-        row[columns[i]] = params[idx];
-      } else if (ph === "NOW()") {
-        row[columns[i]] = new Date().toISOString();
-      } else if (ph.startsWith("'") && ph.endsWith("'")) {
-        row[columns[i]] = ph.slice(1, -1);
-      } else {
-        row[columns[i]] = ph;
-      }
-    }
-    const inserted = insertRow(table, row);
+    const inserted = insertRow(table, buildRow(columns, placeholders, params));
     return { rows: [inserted], rowCount: 1 };
   }
 
@@ -329,17 +317,7 @@ function handleUpdate(sql, params) {
   const updates = {};
   for (const part of setParts) {
     const [col, ...valParts] = part.trim().split('=');
-    let val = valParts.join('=').trim();
-    if (val.startsWith('$')) {
-      const idx = Number(val.substring(1)) - 1;
-      updates[col.trim()] = params[idx];
-    } else if (val === "NOW()") {
-      updates[col.trim()] = new Date().toISOString();
-    } else if (val.startsWith("'") && val.endsWith("'")) {
-      updates[col.trim()] = val.slice(1, -1);
-    } else {
-      updates[col.trim()] = val;
-    }
+    updates[col.trim()] = resolveValue(valParts.join('=').trim(), params);
   }
 
   for (const row of rows) {

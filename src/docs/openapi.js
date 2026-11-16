@@ -1,3 +1,278 @@
+// Especificación OpenAPI armada con pequeños helpers para no repetir
+// las mismas respuestas, parámetros y envoltorios en cada endpoint.
+const ref = (path) => ({ $ref: `#/components/${path}` });
+const schemaRef = (name) => ref(`schemas/${name}`);
+const jsonContent = (schema) => ({ 'application/json': { schema } });
+const jsonBody = (schema) => ({ required: true, content: jsonContent(schema) });
+const response = (description, schema) => ({ description, content: jsonContent(schema) });
+const objectOf = (properties, required) => ({ type: 'object', properties, ...(required && { required }) });
+
+const successStatus = { type: 'string', enum: ['success'] };
+const success = (data, extra = {}) => objectOf({ status: successStatus, data, ...extra });
+const successMessage = (example, data) =>
+  success(objectOf({ message: { type: 'string', example }, ...(data && { data }) }));
+
+const ERROR_REFS = {
+  400: 'BadRequest',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'NotFound',
+  500: 'InternalError',
+  503: 'ServiceUnavailable',
+};
+const errors = (...codes) => Object.fromEntries(codes.map((code) => [code, ref(`responses/${ERROR_REFS[code]}`)]));
+const errorResponse = (description) => response(description, schemaRef('ErrorResponse'));
+
+const bearer = [{ bearerAuth: [] }];
+const idParam = [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }];
+const dateTime = { type: 'string', format: 'date-time', example: '2026-10-16T10:00:00.000Z' };
+const nullableString = (example) => ({ type: 'string', nullable: true, ...(example && { example }) });
+const sexo = { type: 'string', enum: ['M', 'F', 'OTRO'], nullable: true };
+const estadoSolicitud = { type: 'string', enum: ['PENDIENTE', 'APROBADA', 'RECHAZADA'] };
+const AUTH_ERRORS = [400, 401, 403, 404, 500];
+
+const operation = (tag, summary, responses, extra = {}) => ({ tags: [tag], summary, ...extra, responses });
+const securedById = (tag, summary, responses, extra = {}) =>
+  operation(tag, summary, responses, { security: bearer, parameters: idParam, ...extra });
+
+const healthData = (properties) =>
+  objectOf({
+    success: { type: 'boolean', example: true },
+    status: successStatus,
+    data: objectOf({ status: { type: 'string', enum: ['ok'] }, ...properties }, ['status']),
+  }, ['status', 'data']);
+
+const roleCheck = (summary, message) =>
+  operation('Auth', summary, {
+    200: response('Acceso permitido', successMessage(message)),
+    ...errors(401, 403),
+  }, { security: bearer });
+
+const schemas = {
+  ErrorResponse: objectOf({
+    success: { type: 'boolean', example: false },
+    status: { type: 'string', enum: ['error'] },
+    message: { type: 'string', description: 'Descripción del error' },
+    error: objectOf({ message: { type: 'string', description: 'Descripción del error' } }),
+  }, ['status', 'message']),
+  User: objectOf({
+    id: { type: 'integer', example: 1 },
+    nombre: { type: 'string', example: 'Ana Gomez' },
+    email: { type: 'string', format: 'email', example: 'ana@example.com' },
+    rol: { type: 'string', enum: ['ADMIN', 'ADOPTANTE'] },
+  }, ['id', 'nombre', 'email', 'rol']),
+  Mascota: objectOf({
+    id: { type: 'integer', example: 1 },
+    nombre: { type: 'string', example: 'Firulais' },
+    especie: { type: 'string', example: 'Perro' },
+    raza: nullableString('Labrador'),
+    edad: { type: 'integer', nullable: true, example: 3 },
+    sexo: { ...sexo, example: 'M' },
+    descripcion: nullableString('Perro muy sociable'),
+    adoptada: { type: 'boolean', example: false },
+    creado_por: { type: 'integer', nullable: true, example: 2 },
+    created_at: dateTime,
+  }, ['id', 'nombre', 'especie', 'adoptada', 'created_at']),
+  HistorialClinico: objectOf({
+    id: { type: 'integer', example: 1 },
+    mascota_id: { type: 'integer', example: 1 },
+    fecha_registro: { ...dateTime, example: '2026-10-10T00:00:00.000Z' },
+    descripcion: { type: 'string', example: 'Vacunación anual' },
+    veterinario: nullableString('Dra. Torres'),
+    created_at: dateTime,
+    updated_at: dateTime,
+  }, ['id', 'mascota_id', 'fecha_registro', 'descripcion']),
+  SolicitudAdopcion: objectOf({
+    id: { type: 'integer', example: 1 },
+    usuario_id: { type: 'integer', example: 2 },
+    mascota_id: { type: 'integer', example: 1 },
+    estado: { ...estadoSolicitud, example: 'PENDIENTE' },
+    mensaje: nullableString('Me gustaría adoptar a Firulais'),
+    created_at: dateTime,
+    updated_at: dateTime,
+  }, ['id', 'usuario_id', 'mascota_id', 'estado']),
+  LoginRequest: objectOf({
+    email: { type: 'string', format: 'email', example: 'ana@example.com' },
+    password: { type: 'string', example: 'secret123' },
+  }, ['email', 'password']),
+  LoginResponse: objectOf({
+    status: successStatus,
+    data: objectOf({
+      token: { type: 'string', description: 'JWT Bearer token' },
+      user: schemaRef('User'),
+    }, ['token', 'user']),
+  }, ['status', 'data']),
+  HealthProcessResponse: healthData({}),
+  HealthDatabaseResponse: healthData({
+    databaseTime: { type: 'string', nullable: true, example: '2026-10-21T13:00:00.000Z' },
+  }),
+};
+
+const responses = {
+  SuccessOk: response('Respuesta exitosa', objectOf({ status: { type: 'string', enum: ['success', 'ok'] } })),
+  Unauthorized: errorResponse('No autenticado o token inválido'),
+  Forbidden: errorResponse('No tiene permisos suficientes'),
+  NotFound: errorResponse('Recurso no encontrado'),
+  BadRequest: errorResponse('Validación o entrada inválida'),
+  InternalError: errorResponse('Error del servidor'),
+  ServiceUnavailable: errorResponse('Dependencia no disponible (PostgreSQL inaccesible)'),
+};
+
+const mascota = schemaRef('Mascota');
+const historial = schemaRef('HistorialClinico');
+const solicitud = schemaRef('SolicitudAdopcion');
+
+const mascotaFields = {
+  nombre: { type: 'string' },
+  especie: { type: 'string' },
+  raza: nullableString(),
+  edad: { type: 'integer', nullable: true },
+  sexo,
+  descripcion: nullableString(),
+  adoptada: { type: 'boolean' },
+};
+
+const paths = {
+  '/health': {
+    get: operation('Health', 'Verifica que el proceso de Express esté disponible', {
+      200: response('Proceso disponible', schemaRef('HealthProcessResponse')),
+    }, { description: 'Comprobación de vida del proceso. No consulta PostgreSQL y no depende de la base de datos.' }),
+  },
+  '/api/db-check': {
+    get: operation('Health', 'Verifica la disponibilidad de PostgreSQL', {
+      200: response('Base de datos disponible', schemaRef('HealthDatabaseResponse')),
+      ...errors(503),
+    }, { description: 'Ejecuta una comprobación mínima (SELECT 1) sobre el pool de conexiones existente.' }),
+  },
+  '/api/auth/login': {
+    post: operation('Auth', 'Inicia sesión y devuelve un JWT para las llamadas autenticadas', {
+      200: response('Login exitoso', schemaRef('LoginResponse')),
+      ...errors(400, 401, 500),
+    }, { requestBody: jsonBody(schemaRef('LoginRequest')) }),
+  },
+  '/api/auth/validate-token': {
+    get: operation('Auth', 'Valida el JWT actual y devuelve el usuario autenticado', {
+      200: response('Token válido', success(objectOf({
+        user: objectOf({ id: { type: 'integer' }, email: { type: 'string' }, rol: { type: 'string' } }),
+      }))),
+      ...errors(401, 500),
+    }, { security: bearer }),
+  },
+  '/api/auth/admin-only': {
+    get: roleCheck('Prueba de acceso exclusivo para administradores', 'admin access granted'),
+  },
+  '/api/auth/adoptante-only': {
+    get: roleCheck('Prueba de acceso exclusivo para adoptantes', 'adoptante access granted'),
+  },
+  '/api/mascotas': {
+    get: operation('Mascotas', 'Lista todas las mascotas', {
+      200: response('Listado de mascotas', success(
+        { type: 'array', items: mascota },
+        { count: { type: 'integer', example: 2 } },
+      )),
+      ...errors(500),
+    }),
+    post: operation('Mascotas', 'Crea una nueva mascota', {
+      201: response('Mascota creada', success(mascota)),
+      ...errors(400, 500),
+    }, {
+      requestBody: jsonBody(objectOf({
+        nombre: { type: 'string', example: 'Firulais' },
+        especie: { type: 'string', example: 'Perro' },
+        raza: nullableString('Labrador'),
+        edad: { type: 'integer', nullable: true, example: 3 },
+        sexo: { ...sexo, example: 'M' },
+        descripcion: nullableString('Perro muy sociable'),
+        adoptada: { type: 'boolean', example: false },
+        creado_por: { type: 'integer', nullable: true, example: 2 },
+      }, ['nombre', 'especie'])),
+    }),
+  },
+  '/api/mascotas/{id}': {
+    get: operation('Mascotas', 'Obtiene una mascota por ID', {
+      200: response('Mascota encontrada', success(mascota)),
+      ...errors(400, 404, 500),
+    }, { parameters: idParam }),
+    put: operation('Mascotas', 'Actualiza una mascota por ID', {
+      200: response('Mascota actualizada', success(mascota)),
+      ...errors(400, 404, 500),
+    }, {
+      parameters: idParam,
+      requestBody: jsonBody({
+        type: 'object',
+        description: 'Campos parciales de la mascota a actualizar',
+        properties: mascotaFields,
+      }),
+    }),
+    delete: operation('Mascotas', 'Elimina una mascota por ID', {
+      200: response('Mascota eliminada', successMessage('Mascota deleted successfully', mascota)),
+      ...errors(400, 404, 500),
+    }, { parameters: idParam }),
+  },
+  '/api/mascotas/{id}/historial': {
+    get: securedById('Mascotas', 'Obtiene el historial clínico de una mascota', {
+      200: response('Historial clínico', success({ type: 'array', items: historial })),
+      ...errors(...AUTH_ERRORS),
+    }),
+    post: securedById('Mascotas', 'Agrega un registro al historial clínico de una mascota', {
+      201: response('Registro creado', success(historial)),
+      ...errors(...AUTH_ERRORS),
+    }, {
+      requestBody: jsonBody(objectOf({
+        descripcion: { type: 'string', example: 'Vacunación anual' },
+        veterinario: nullableString('Dra. Torres'),
+      }, ['descripcion'])),
+    }),
+  },
+  '/api/historial/{id}': {
+    put: securedById('Mascotas', 'Actualiza un registro de historial clínico', {
+      200: response('Registro actualizado', success(historial)),
+      ...errors(...AUTH_ERRORS),
+    }, {
+      requestBody: jsonBody(objectOf({
+        fecha_registro: { type: 'string', format: 'date-time' },
+        descripcion: { type: 'string' },
+        veterinario: nullableString(),
+      })),
+    }),
+    delete: securedById('Mascotas', 'Elimina un registro de historial clínico', {
+      200: response('Registro eliminado', successMessage('Historial clinico deleted successfully', historial)),
+      ...errors(...AUTH_ERRORS),
+    }),
+  },
+  '/api/solicitudes': {
+    get: operation('Solicitudes', 'Lista solicitudes de adopción del usuario o del sistema', {
+      200: response('Listado de solicitudes', success(
+        { type: 'array', items: solicitud },
+        { count: { type: 'integer', example: 1 } },
+      )),
+      ...errors(401, 403, 500),
+    }, { security: bearer }),
+    post: operation('Solicitudes', 'Crea una nueva solicitud de adopción', {
+      201: response('Solicitud creada', success(solicitud)),
+      ...errors(400, 401, 404, 500),
+    }, {
+      security: bearer,
+      requestBody: jsonBody(objectOf({
+        mascota_id: { type: 'integer', example: 1 },
+        mensaje: nullableString('Me gustaría adoptar a Firulais'),
+      }, ['mascota_id'])),
+    }),
+  },
+  '/api/solicitudes/{id}': {
+    get: securedById('Solicitudes', 'Obtiene una solicitud por ID', {
+      200: response('Solicitud encontrada', success(solicitud)),
+      ...errors(...AUTH_ERRORS),
+    }),
+    put: securedById('Solicitudes', 'Actualiza el estado de una solicitud (solo ADMIN)', {
+      200: response('Estado actualizado', success(solicitud)),
+      ...errors(...AUTH_ERRORS),
+    }, {
+      requestBody: jsonBody(objectOf({ estado: { ...estadoSolicitud, example: 'APROBADA' } }, ['estado'])),
+    }),
+  },
+};
+
 const openApiSpec = {
   openapi: '3.0.3',
   info: {
@@ -5,12 +280,7 @@ const openApiSpec = {
     version: '1.0.0',
     description: 'Documentación OpenAPI de la API Express del backend B-profesional.',
   },
-  servers: [
-    {
-      url: 'http://localhost:3000',
-      description: 'Servidor local de desarrollo',
-    },
-  ],
+  servers: [{ url: 'http://localhost:3000', description: 'Servidor local de desarrollo' }],
   tags: [
     { name: 'Health', description: 'Estado y verificación del servicio' },
     { name: 'Auth', description: 'Autenticación y autorización JWT' },
@@ -18,757 +288,11 @@ const openApiSpec = {
     { name: 'Solicitudes', description: 'Solicitudes de adopción' },
   ],
   components: {
-    securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-      },
-    },
-    schemas: {
-      ErrorResponse: {
-        type: 'object',
-        properties: {
-          success: { type: 'boolean', example: false },
-          status: { type: 'string', enum: ['error'] },
-          message: { type: 'string', description: 'Descripción del error' },
-          error: {
-            type: 'object',
-            properties: {
-              message: { type: 'string', description: 'Descripción del error' },
-            },
-          },
-        },
-        required: ['status', 'message'],
-      },
-      User: {
-        type: 'object',
-        properties: {
-          id: { type: 'integer', example: 1 },
-          nombre: { type: 'string', example: 'Ana Gomez' },
-          email: { type: 'string', format: 'email', example: 'ana@example.com' },
-          rol: { type: 'string', enum: ['ADMIN', 'ADOPTANTE'] },
-        },
-        required: ['id', 'nombre', 'email', 'rol'],
-      },
-      Mascota: {
-        type: 'object',
-        properties: {
-          id: { type: 'integer', example: 1 },
-          nombre: { type: 'string', example: 'Firulais' },
-          especie: { type: 'string', example: 'Perro' },
-          raza: { type: 'string', nullable: true, example: 'Labrador' },
-          edad: { type: 'integer', nullable: true, example: 3 },
-          sexo: { type: 'string', enum: ['M', 'F', 'OTRO'], nullable: true, example: 'M' },
-          descripcion: { type: 'string', nullable: true, example: 'Perro muy sociable' },
-          adoptada: { type: 'boolean', example: false },
-          creado_por: { type: 'integer', nullable: true, example: 2 },
-          created_at: { type: 'string', format: 'date-time', example: '2026-10-16T10:00:00.000Z' },
-        },
-        required: ['id', 'nombre', 'especie', 'adoptada', 'created_at'],
-      },
-      HistorialClinico: {
-        type: 'object',
-        properties: {
-          id: { type: 'integer', example: 1 },
-          mascota_id: { type: 'integer', example: 1 },
-          fecha_registro: { type: 'string', format: 'date-time', example: '2026-10-10T00:00:00.000Z' },
-          descripcion: { type: 'string', example: 'Vacunación anual' },
-          veterinario: { type: 'string', nullable: true, example: 'Dra. Torres' },
-          created_at: { type: 'string', format: 'date-time', example: '2026-10-16T10:00:00.000Z' },
-          updated_at: { type: 'string', format: 'date-time', example: '2026-10-16T10:00:00.000Z' },
-        },
-        required: ['id', 'mascota_id', 'fecha_registro', 'descripcion'],
-      },
-      SolicitudAdopcion: {
-        type: 'object',
-        properties: {
-          id: { type: 'integer', example: 1 },
-          usuario_id: { type: 'integer', example: 2 },
-          mascota_id: { type: 'integer', example: 1 },
-          estado: { type: 'string', enum: ['PENDIENTE', 'APROBADA', 'RECHAZADA'], example: 'PENDIENTE' },
-          mensaje: { type: 'string', nullable: true, example: 'Me gustaría adoptar a Firulais' },
-          created_at: { type: 'string', format: 'date-time', example: '2026-10-16T10:00:00.000Z' },
-          updated_at: { type: 'string', format: 'date-time', example: '2026-10-16T10:00:00.000Z' },
-        },
-        required: ['id', 'usuario_id', 'mascota_id', 'estado'],
-      },
-      LoginRequest: {
-        type: 'object',
-        properties: {
-          email: { type: 'string', format: 'email', example: 'ana@example.com' },
-          password: { type: 'string', example: 'secret123' },
-        },
-        required: ['email', 'password'],
-      },
-      LoginResponse: {
-        type: 'object',
-        properties: {
-          status: { type: 'string', enum: ['success'] },
-          data: {
-            type: 'object',
-            properties: {
-              token: { type: 'string', description: 'JWT Bearer token' },
-              user: { $ref: '#/components/schemas/User' },
-            },
-            required: ['token', 'user'],
-          },
-        },
-        required: ['status', 'data'],
-      },
-      HealthProcessResponse: {
-        type: 'object',
-        properties: {
-          success: { type: 'boolean', example: true },
-          status: { type: 'string', enum: ['success'] },
-          data: {
-            type: 'object',
-            properties: {
-              status: { type: 'string', enum: ['ok'] },
-            },
-            required: ['status'],
-          },
-        },
-        required: ['status', 'data'],
-      },
-      HealthDatabaseResponse: {
-        type: 'object',
-        properties: {
-          success: { type: 'boolean', example: true },
-          status: { type: 'string', enum: ['success'] },
-          data: {
-            type: 'object',
-            properties: {
-              status: { type: 'string', enum: ['ok'] },
-              databaseTime: { type: 'string', nullable: true, example: '2026-10-21T13:00:00.000Z' },
-            },
-            required: ['status'],
-          },
-        },
-        required: ['status', 'data'],
-      },
-    },
-    responses: {
-      SuccessOk: {
-        description: 'Respuesta exitosa',
-        content: {
-          'application/json': {
-            schema: {
-              type: 'object',
-              properties: {
-                status: { type: 'string', enum: ['success', 'ok'] },
-              },
-            },
-          },
-        },
-      },
-      Unauthorized: {
-        description: 'No autenticado o token inválido',
-        content: {
-          'application/json': {
-            schema: { $ref: '#/components/schemas/ErrorResponse' },
-          },
-        },
-      },
-      Forbidden: {
-        description: 'No tiene permisos suficientes',
-        content: {
-          'application/json': {
-            schema: { $ref: '#/components/schemas/ErrorResponse' },
-          },
-        },
-      },
-      NotFound: {
-        description: 'Recurso no encontrado',
-        content: {
-          'application/json': {
-            schema: { $ref: '#/components/schemas/ErrorResponse' },
-          },
-        },
-      },
-      BadRequest: {
-        description: 'Validación o entrada inválida',
-        content: {
-          'application/json': {
-            schema: { $ref: '#/components/schemas/ErrorResponse' },
-          },
-        },
-      },
-      InternalError: {
-        description: 'Error del servidor',
-        content: {
-          'application/json': {
-            schema: { $ref: '#/components/schemas/ErrorResponse' },
-          },
-        },
-      },
-      ServiceUnavailable: {
-        description: 'Dependencia no disponible (PostgreSQL inaccesible)',
-        content: {
-          'application/json': {
-            schema: { $ref: '#/components/schemas/ErrorResponse' },
-          },
-        },
-      },
-    },
+    securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },
+    schemas,
+    responses,
   },
-  paths: {
-    '/health': {
-      get: {
-        tags: ['Health'],
-        summary: 'Verifica que el proceso de Express esté disponible',
-        description: 'Comprobación de vida del proceso. No consulta PostgreSQL y no depende de la base de datos.',
-        responses: {
-          200: {
-            description: 'Proceso disponible',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/HealthProcessResponse' },
-              },
-            },
-          },
-        },
-      },
-    },
-    '/api/db-check': {
-      get: {
-        tags: ['Health'],
-        summary: 'Verifica la disponibilidad de PostgreSQL',
-        description: 'Ejecuta una comprobación mínima (SELECT 1) sobre el pool de conexiones existente.',
-        responses: {
-          200: {
-            description: 'Base de datos disponible',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/HealthDatabaseResponse' },
-              },
-            },
-          },
-          503: { $ref: '#/components/responses/ServiceUnavailable' },
-        },
-      },
-    },
-    '/api/auth/login': {
-      post: {
-        tags: ['Auth'],
-        summary: 'Inicia sesión y devuelve un JWT para las llamadas autenticadas',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/LoginRequest' },
-            },
-          },
-        },
-        responses: {
-          200: {
-            description: 'Login exitoso',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/LoginResponse' },
-              },
-            },
-          },
-          400: { $ref: '#/components/responses/BadRequest' },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-    },
-    '/api/auth/validate-token': {
-      get: {
-        tags: ['Auth'],
-        summary: 'Valida el JWT actual y devuelve el usuario autenticado',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: 'Token válido',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        user: {
-                          type: 'object',
-                          properties: {
-                            id: { type: 'integer' },
-                            email: { type: 'string' },
-                            rol: { type: 'string' },
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-    },
-    '/api/auth/admin-only': {
-      get: {
-        tags: ['Auth'],
-        summary: 'Prueba de acceso exclusivo para administradores',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: 'Acceso permitido',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        message: { type: 'string', example: 'admin access granted' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-        },
-      },
-    },
-    '/api/auth/adoptante-only': {
-      get: {
-        tags: ['Auth'],
-        summary: 'Prueba de acceso exclusivo para adoptantes',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: 'Acceso permitido',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        message: { type: 'string', example: 'adoptante access granted' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-        },
-      },
-    },
-    '/api/mascotas': {
-      get: {
-        tags: ['Mascotas'],
-        summary: 'Lista todas las mascotas',
-        responses: {
-          200: {
-            description: 'Listado de mascotas',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Mascota' },
-                    },
-                    count: { type: 'integer', example: 2 },
-                  },
-                },
-              },
-            },
-          },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-      post: {
-        tags: ['Mascotas'],
-        summary: 'Crea una nueva mascota',
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  nombre: { type: 'string', example: 'Firulais' },
-                  especie: { type: 'string', example: 'Perro' },
-                  raza: { type: 'string', nullable: true, example: 'Labrador' },
-                  edad: { type: 'integer', nullable: true, example: 3 },
-                  sexo: { type: 'string', enum: ['M', 'F', 'OTRO'], nullable: true, example: 'M' },
-                  descripcion: { type: 'string', nullable: true, example: 'Perro muy sociable' },
-                  adoptada: { type: 'boolean', example: false },
-                  creado_por: { type: 'integer', nullable: true, example: 2 },
-                },
-                required: ['nombre', 'especie'],
-              },
-            },
-          },
-        },
-        responses: {
-          201: {
-            description: 'Mascota creada',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: { $ref: '#/components/schemas/Mascota' },
-                  },
-                },
-              },
-            },
-          },
-          400: { $ref: '#/components/responses/BadRequest' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-    },
-    '/api/mascotas/{id}': {
-      get: {
-        tags: ['Mascotas'],
-        summary: 'Obtiene una mascota por ID',
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        responses: {
-          200: {
-            description: 'Mascota encontrada',
-            content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['success'] }, data: { $ref: '#/components/schemas/Mascota' } } } } },
-          },
-          400: { $ref: '#/components/responses/BadRequest' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-      put: {
-        tags: ['Mascotas'],
-        summary: 'Actualiza una mascota por ID',
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                description: 'Campos parciales de la mascota a actualizar',
-                properties: {
-                  nombre: { type: 'string' },
-                  especie: { type: 'string' },
-                  raza: { type: 'string', nullable: true },
-                  edad: { type: 'integer', nullable: true },
-                  sexo: { type: 'string', enum: ['M', 'F', 'OTRO'], nullable: true },
-                  descripcion: { type: 'string', nullable: true },
-                  adoptada: { type: 'boolean' },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          200: { description: 'Mascota actualizada', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['success'] }, data: { $ref: '#/components/schemas/Mascota' } } } } } },
-          400: { $ref: '#/components/responses/BadRequest' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-      delete: {
-        tags: ['Mascotas'],
-        summary: 'Elimina una mascota por ID',
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        responses: {
-          200: {
-            description: 'Mascota eliminada',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        message: { type: 'string', example: 'Mascota deleted successfully' },
-                        data: { $ref: '#/components/schemas/Mascota' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          400: { $ref: '#/components/responses/BadRequest' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-    },
-    '/api/mascotas/{id}/historial': {
-      get: {
-        tags: ['Mascotas'],
-        summary: 'Obtiene el historial clínico de una mascota',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        responses: {
-          200: {
-            description: 'Historial clínico',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: { type: 'array', items: { $ref: '#/components/schemas/HistorialClinico' } },
-                  },
-                },
-              },
-            },
-          },
-          400: { $ref: '#/components/responses/BadRequest' },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-      post: {
-        tags: ['Mascotas'],
-        summary: 'Agrega un registro al historial clínico de una mascota',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  descripcion: { type: 'string', example: 'Vacunación anual' },
-                  veterinario: { type: 'string', nullable: true, example: 'Dra. Torres' },
-                },
-                required: ['descripcion'],
-              },
-            },
-          },
-        },
-        responses: {
-          201: { description: 'Registro creado', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['success'] }, data: { $ref: '#/components/schemas/HistorialClinico' } } } } } },
-          400: { $ref: '#/components/responses/BadRequest' },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-    },
-    '/api/historial/{id}': {
-      put: {
-        tags: ['Mascotas'],
-        summary: 'Actualiza un registro de historial clínico',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  fecha_registro: { type: 'string', format: 'date-time' },
-                  descripcion: { type: 'string' },
-                  veterinario: { type: 'string', nullable: true },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          200: { description: 'Registro actualizado', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['success'] }, data: { $ref: '#/components/schemas/HistorialClinico' } } } } } },
-          400: { $ref: '#/components/responses/BadRequest' },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-      delete: {
-        tags: ['Mascotas'],
-        summary: 'Elimina un registro de historial clínico',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        responses: {
-          200: {
-            description: 'Registro eliminado',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: {
-                      type: 'object',
-                      properties: {
-                        message: { type: 'string', example: 'Historial clinico deleted successfully' },
-                        data: { $ref: '#/components/schemas/HistorialClinico' },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-          400: { $ref: '#/components/responses/BadRequest' },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-    },
-    '/api/solicitudes': {
-      get: {
-        tags: ['Solicitudes'],
-        summary: 'Lista solicitudes de adopción del usuario o del sistema',
-        security: [{ bearerAuth: [] }],
-        responses: {
-          200: {
-            description: 'Listado de solicitudes',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/SolicitudAdopcion' },
-                    },
-                    count: { type: 'integer', example: 1 },
-                  },
-                },
-              },
-            },
-          },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-      post: {
-        tags: ['Solicitudes'],
-        summary: 'Crea una nueva solicitud de adopción',
-        security: [{ bearerAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  mascota_id: { type: 'integer', example: 1 },
-                  mensaje: { type: 'string', nullable: true, example: 'Me gustaría adoptar a Firulais' },
-                },
-                required: ['mascota_id'],
-              },
-            },
-          },
-        },
-        responses: {
-          201: {
-            description: 'Solicitud creada',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: { $ref: '#/components/schemas/SolicitudAdopcion' },
-                  },
-                },
-              },
-            },
-          },
-          400: { $ref: '#/components/responses/BadRequest' },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-    },
-    '/api/solicitudes/{id}': {
-      get: {
-        tags: ['Solicitudes'],
-        summary: 'Obtiene una solicitud por ID',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        responses: {
-          200: {
-            description: 'Solicitud encontrada',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string', enum: ['success'] },
-                    data: { $ref: '#/components/schemas/SolicitudAdopcion' },
-                  },
-                },
-              },
-            },
-          },
-          400: { $ref: '#/components/responses/BadRequest' },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-      put: {
-        tags: ['Solicitudes'],
-        summary: 'Actualiza el estado de una solicitud (solo ADMIN)',
-        security: [{ bearerAuth: [] }],
-        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'integer', minimum: 1 } }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                properties: {
-                  estado: { type: 'string', enum: ['PENDIENTE', 'APROBADA', 'RECHAZADA'], example: 'APROBADA' },
-                },
-                required: ['estado'],
-              },
-            },
-          },
-        },
-        responses: {
-          200: { description: 'Estado actualizado', content: { 'application/json': { schema: { type: 'object', properties: { status: { type: 'string', enum: ['success'] }, data: { $ref: '#/components/schemas/SolicitudAdopcion' } } } } } },
-          400: { $ref: '#/components/responses/BadRequest' },
-          401: { $ref: '#/components/responses/Unauthorized' },
-          403: { $ref: '#/components/responses/Forbidden' },
-          404: { $ref: '#/components/responses/NotFound' },
-          500: { $ref: '#/components/responses/InternalError' },
-        },
-      },
-    },
-  },
+  paths,
 };
 
 module.exports = openApiSpec;
