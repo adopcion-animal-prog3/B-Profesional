@@ -9,31 +9,26 @@ describe('Autenticación y autorización', () => {
   const api = useTestApp();
   const testUser = {
     id: 7,
-    nombre: 'Adoptante de prueba',
-    email: 'adoptante@example.test',
-    rol: 'ADOPTANTE',
+    nombre: 'Refugio de prueba',
+    email: 'refugio@example.test',
+    rol: 'ADMIN',
     password_hash: bcrypt.hashSync('test-only-password', 4),
   };
 
-  it('inicia sesión con credenciales válidas y devuelve un token y datos públicos', async () => {
-    api.queueResults({ rows: [testUser] });
+  it('con credenciales válidas no entrega token: envía un código por email (202)', async () => {
+    api.queueResults({ rows: [testUser] }, { rows: [] }, { rows: [{ id: 1 }] });
 
     const res = await api.request('POST', '/api/auth/login', {
-      email: '  ADOPTANTE@example.test ',
+      email: '  REFUGIO@example.test ',
       password: 'test-only-password',
     });
 
-    assert.equal(res.status, 200);
-    assert.equal(res.body.success, true);
-    assert.deepEqual(res.body.data.user, {
-      id: testUser.id,
-      nombre: testUser.nombre,
-      email: testUser.email,
-      rol: testUser.rol,
-    });
-    assert.equal(res.body.data.token.length > 0, true);
-    assert.equal(jwt.verify(res.body.data.token, process.env.JWT_SECRET).id, testUser.id);
-    assert.deepEqual(api.calls[0].params, ['adoptante@example.test']);
+    assert.equal(res.status, 202);
+    assert.equal(res.body.data.verificacion_requerida, true);
+    assert.equal(res.body.data.verificacion.proposito, 'LOGIN');
+    assert.equal(res.body.data.token, undefined);
+    assert.deepEqual(api.calls[0].params, ['refugio@example.test']);
+    assert.ok(jwt);
   });
 
   it('rechaza una contraseña incorrecta con 401', async () => {

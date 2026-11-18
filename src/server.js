@@ -8,18 +8,23 @@ const dbRoutes = require('./routes/db.routes');
 const mascotasRoutes = require('./routes/mascotas.routes');
 const authRoutes = require('./routes/auth.routes');
 const solicitudesRoutes = require('./routes/solicitudes.routes');
+const historialRoutes = require('./routes/historial.routes');
+const mensajesRoutes = require('./routes/mensajes.routes');
 const swaggerUiRoutes = require('./docs/swagger-ui');
 
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+// Límite ampliado para admitir la imagen de la mascota (data URL base64).
+app.use(express.json({ limit: '5mb' }));
 
 app.use(healthRoutes);
 app.use(dbRoutes);
 app.use(mascotasRoutes);
 app.use(authRoutes);
+app.use(historialRoutes);
 app.use(solicitudesRoutes);
+app.use(mensajesRoutes);
 app.use(swaggerUiRoutes);
 
 app.use(notFoundHandler);

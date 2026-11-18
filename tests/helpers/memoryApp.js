@@ -5,10 +5,20 @@ const { before, after } = require('node:test');
 
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'integration-tests-only-secret';
 process.env.DB_MODE = 'memory';
+process.env.SEED_DEMO_DATA = 'true';
+process.env.MAIL_MODE = 'memory';
 
-const { initDatabase } = require('../../src/config/database');
+const jwt = require('jsonwebtoken');
+const { initDatabase, query } = require('../../src/config/database');
 const { DEMO_PASSWORD } = require('../../src/config/seed');
 const { app } = require('../../src/server');
+const { outbox } = require('../../src/services/mailer.service');
+
+// Extrae el código de 6 dígitos del último correo enviado a `email`.
+const lastCodeFor = (email) => {
+  const mail = [...outbox].reverse().find((item) => item.to.toLowerCase() === email.toLowerCase());
+  return mail?.text.match(/\b(\d{6})\b/)?.[1];
+};
 
 function useMemoryApp() {
   const context = { baseUrl: '' };
@@ -42,12 +52,22 @@ function useMemoryApp() {
     return { status: response.status, body: payload };
   };
 
-  const login = async (email) => {
-    const res = await request('POST', '/api/auth/login', { body: { email, password: DEMO_PASSWORD } });
+  // Login completo en dos pasos: contraseña -> código recibido por email -> token.
+  const login = async (email, password = DEMO_PASSWORD) => {
+    const first = await request('POST', '/api/auth/login', { body: { email, password } });
+    if (first.status !== 202) return undefined;
+    const res = await request('POST', '/api/auth/verify', { body: { email, codigo: lastCodeFor(email) } });
     return res.body?.data?.token;
   };
 
-  return { request, login };
+  // Las cuentas ADOPTANTE no inician sesión en este portal: se firma su token directamente.
+  const tokenFor = async (email) => {
+    const result = await query('SELECT id, email, rol FROM usuarios WHERE LOWER(email) = $1', [email]);
+    const { id, rol } = result.rows[0];
+    return jwt.sign({ id, email, rol }, process.env.JWT_SECRET, { subject: String(id), algorithm: 'HS256' });
+  };
+
+  return { request, login, tokenFor, lastCodeFor };
 }
 
 module.exports = { useMemoryApp };

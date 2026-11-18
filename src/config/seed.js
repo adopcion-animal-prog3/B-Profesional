@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const DEMO_PASSWORD = 'Demo1234!';
 
 const demoUsers = [
-  { nombre: 'Administrador Demo', email: 'admin@adopcion.test', rol: 'ADMIN' },
+  { nombre: 'Refugio Demo', email: 'admin@adopcion.test', rol: 'ADMIN' },
   { nombre: 'Adoptante Demo', email: 'adoptante@adopcion.test', rol: 'ADOPTANTE' },
   { nombre: 'Ana Martínez', email: 'ana@adopcion.test', rol: 'ADOPTANTE' },
 ];
@@ -108,12 +108,14 @@ async function seedDatabase(queryFn) {
     userIds[user.email] = result.rows[0].id;
   }
 
+  // Las mascotas de ejemplo quedan publicadas por la cuenta profesional demo.
+  const publisherId = userIds['admin@adopcion.test'];
   const petIds = {};
   for (const pet of demoPets) {
     const result = await queryFn(
       `INSERT INTO mascotas (nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-      [pet.nombre, pet.especie, pet.raza, pet.edad, pet.sexo, pet.descripcion, pet.adoptada, pet.creado_por]
+      [pet.nombre, pet.especie, pet.raza, pet.edad, pet.sexo, pet.descripcion, pet.adoptada, publisherId]
     );
     petIds[pet.nombre] = result.rows[0].id;
   }

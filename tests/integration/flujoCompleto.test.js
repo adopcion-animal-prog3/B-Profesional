@@ -2,7 +2,7 @@ const { describe, it } = require('node:test');
 const assert = require('node:assert/strict');
 const { useMemoryApp } = require('../helpers/memoryApp');
 
-const { request, login } = useMemoryApp();
+const { request, login, tokenFor } = useMemoryApp();
 
 describe('integración con la base en memoria', () => {
   it('responde salud, verificación de base y documentación', async () => {
@@ -20,7 +20,10 @@ describe('integración con la base en memoria', () => {
 
   it('inicia sesión con los usuarios sembrados y rechaza credenciales inválidas', async () => {
     assert.ok(await login('admin@adopcion.test'));
-    assert.ok(await login('ADOPTANTE@adopcion.test'));
+    const adoptante = await request('POST', '/api/auth/login', {
+      body: { email: 'adoptante@adopcion.test', password: 'Demo1234!' },
+    });
+    assert.equal(adoptante.status, 403);
 
     const bad = await request('POST', '/api/auth/login', {
       body: { email: 'admin@adopcion.test', password: 'incorrecta' },
@@ -78,7 +81,7 @@ describe('integración con la base en memoria', () => {
 
   it('crea, consulta y aprueba una solicitud de adopción', async () => {
     const admin = await login('admin@adopcion.test');
-    const adoptante = await login('adoptante@adopcion.test');
+    const adoptante = await tokenFor('adoptante@adopcion.test');
     const pets = await request('GET', '/api/mascotas');
     const target = pets.body.data.find((pet) => !pet.adoptada);
 

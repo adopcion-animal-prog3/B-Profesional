@@ -59,8 +59,12 @@ describe('Solicitudes de adopción', () => {
     assert.equal(api.calls.length, 1);
   });
 
-  it('lista todas las solicitudes para ADMIN', async () => {
-    api.queueResults({ rows: [solicitud(), solicitud({ id: 13, usuario_id: 8 })] });
+  it('lista para ADMIN solo las solicitudes de sus mascotas, con nombres', async () => {
+    api.queueResults(
+      { rows: [solicitud(), solicitud({ id: 13, usuario_id: 8, mascota_id: 4 })] },
+      { rows: [{ id: 3, nombre: 'Luna', creado_por: 1 }, { id: 4, nombre: 'Max', creado_por: 2 }] },
+      { rows: [{ id: 7, nombre: 'Ana' }, { id: 8, nombre: 'Beto' }] }
+    );
 
     const res = await api.request(
       'GET',
@@ -70,9 +74,10 @@ describe('Solicitudes de adopción', () => {
     );
 
     assert.equal(res.status, 200);
-    assert.equal(res.body.count, 2);
-    assert.equal(res.body.data.length, 2);
-    assert.deepEqual(api.calls[0].params, []);
+    assert.equal(res.body.count, 1);
+    assert.equal(res.body.data[0].id, 12);
+    assert.equal(res.body.data[0].mascota_nombre, 'Luna');
+    assert.equal(res.body.data[0].usuario_nombre, 'Ana');
     assert.doesNotMatch(api.calls[0].text, /WHERE usuario_id/);
   });
 
@@ -115,10 +120,12 @@ describe('Solicitudes de adopción', () => {
     assert.equal(res.body.message, 'Solicitud not found');
   });
 
-  it('permite a ADMIN modificar el estado de una solicitud', async () => {
+  it('permite al publicador aprobar la solicitud y marca la mascota como adoptada', async () => {
     api.queueResults(
       { rows: [solicitud()] },
-      { rows: [solicitud({ estado: 'APROBADA' })] }
+      { rows: [{ id: 3, creado_por: 1 }] },
+      { rows: [solicitud({ estado: 'APROBADA' })] },
+      { rows: [{ id: 3 }] }
     );
 
     const res = await api.request(
@@ -130,7 +137,49 @@ describe('Solicitudes de adopción', () => {
 
     assert.equal(res.status, 200);
     assert.equal(res.body.data.estado, 'APROBADA');
-    assert.deepEqual(api.calls[1].params, ['APROBADA', 12]);
+    assert.deepEqual(api.calls[2].params, ['APROBADA', 12]);
+    assert.match(api.calls[3].text, /UPDATE mascotas SET adoptada/);
+    assert.deepEqual(api.calls[3].params, [true, 3]);
+  });
+
+  it('impide gestionar solicitudes de mascotas publicadas por otra cuenta', async () => {
+    api.queueResults({ rows: [solicitud()] }, { rows: [{ id: 3, creado_por: 2 }] });
+
+    const res = await api.request(
+      'PUT',
+      '/api/solicitudes/12',
+      { estado: 'RECHAZADA' },
+      bearer(tokenFor({ id: 1, rol: 'ADMIN' }))
+    );
+
+    assert.equal(res.status, 403);
+    assert.equal(api.calls.length, 2);
+  });
+
+  it('no permite cambiar una solicitud ya resuelta', async () => {
+    api.queueResults({ rows: [solicitud({ estado: 'APROBADA' })] }, { rows: [{ id: 3, creado_por: 1 }] });
+
+    const res = await api.request(
+      'PUT',
+      '/api/solicitudes/12',
+      { estado: 'RECHAZADA' },
+      bearer(tokenFor({ id: 1, rol: 'ADMIN' }))
+    );
+
+    assert.equal(res.status, 400);
+    assert.match(res.body.message, /Cannot change request status/);
+  });
+
+  it('impide que una cuenta profesional solicite adopciones', async () => {
+    const res = await api.request(
+      'POST',
+      '/api/solicitudes',
+      { mascota_id: 3 },
+      bearer(tokenFor({ id: 1, rol: 'ADMIN' }))
+    );
+
+    assert.equal(res.status, 403);
+    assert.equal(api.calls.length, 0);
   });
 
   it('impide que ADOPTANTE modifique el estado de una solicitud', async () => {
