@@ -3,7 +3,7 @@
 
 > Documento **generado automáticamente** por la cátedra de Programación III (RepoSense + análisis de calidad + constancia). **No editar a mano**: se regenera en cada evaluación.
 > Rama evaluada: `main`. Análisis **heurístico** (regex + métricas): es una criba para orientar la revisión, **no una nota**.
-> Generado: 2026-11-18.
+> Generado: 2026-11-19.
 
 ## 1. Veredicto
 
@@ -38,8 +38,8 @@
 
 | Alumno | Sesiones | Cumplimiento | Pausa | Recencia | IC | Nivel | Para subir de nivel |
 |---|--:|--:|--:|--:|--:|--|--|
-| Juan Ignacio Cruzado | 11 | 40% | 23 d | 0% | **26** | No aprueba | Cumplimiento 40% (mín. 50%); Recencia 0% (mín. 50%) |
-| Juan Martín Rodríguez Secchi | 1 | 4% | 0 d | 14% | **25** | Muestra insuficiente | ≥3 sesiones y ≥2 semanas de período |
+| Juan Ignacio Cruzado | 12 | 43% | 23 d | 93% | **41** | No aprueba | Cumplimiento 43% (mín. 50%) |
+| Juan Martín Rodríguez Secchi | 1 | 4% | 0 d | 7% | **24** | Muestra insuficiente | ≥3 sesiones y ≥2 semanas de período |
 | juanmasecchi | 5 | 18% | 28 d | 0% | **12** | No aprueba | Cumplimiento 18% (mín. 50%); Recencia 0% (mín. 50%) |
 
 > Para aprobar el IC: **2 sesiones por semana** sostenidas, sin pausas mayores a **10 días** y con actividad en las **últimas 2 semanas**. Se excluyen merges, bots y al docente. Zona horaria UTC-3.
@@ -148,7 +148,7 @@ _Cumple **todos** los criterios del semáforo: no hay nada que arreglar para apr
 
 ### Juan Ignacio Cruzado
 
-**13/28 clases con actividad** · total del período: 43 commits · 27 merges
+**14/28 clases con actividad** · total del período: 45 commits · 27 merges
 
 | Fecha | Actividad | Repositorios | Commits / merges |
 |---|:--:|---|--:|
@@ -179,7 +179,7 @@ _Cumple **todos** los criterios del semáforo: no hay nada que arreglar para apr
 | 2026-11-06 | No | sin actividad | 0 / 0 |
 | 2026-11-11 | No | sin actividad | 0 / 0 |
 | 2026-11-13 | No | sin actividad | 0 / 0 |
-| 2026-11-18 | No | sin actividad | 0 / 0 |
+| 2026-11-18 | **Sí** | B-Profesional, F-profesional | 2 / 0 |
 
 **Fuera de clase:** 1 fecha(s) con actividad · 0 commits · 5 merges
 
