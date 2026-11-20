@@ -3,7 +3,7 @@
 
 > Documento **generado automáticamente** por la cátedra de Programación III (RepoSense + análisis de calidad + constancia). **No editar a mano**: se regenera en cada evaluación.
 > Rama evaluada: `main`. Análisis **heurístico** (regex + métricas): es una criba para orientar la revisión, **no una nota**.
-> Generado: 2026-11-19.
+> Generado: 2026-11-20.
 
 ## 1. Veredicto
 
@@ -38,9 +38,9 @@
 
 | Alumno | Sesiones | Cumplimiento | Pausa | Recencia | IC | Nivel | Para subir de nivel |
 |---|--:|--:|--:|--:|--:|--|--|
-| Juan Ignacio Cruzado | 12 | 43% | 23 d | 93% | **41** | No aprueba | Cumplimiento 43% (mín. 50%) |
-| Juan Martín Rodríguez Secchi | 1 | 4% | 0 d | 7% | **24** | Muestra insuficiente | ≥3 sesiones y ≥2 semanas de período |
-| juanmasecchi | 5 | 18% | 28 d | 0% | **12** | No aprueba | Cumplimiento 18% (mín. 50%); Recencia 0% (mín. 50%) |
+| Juan Ignacio Cruzado | 12 | 42% | 23 d | 86% | **40** | No aprueba | Cumplimiento 42% (mín. 50%) |
+| Juan Martín Rodríguez Secchi | 1 | 4% | 0 d | 0% | **23** | Muestra insuficiente | ≥3 sesiones y ≥2 semanas de período |
+| juanmasecchi | 5 | 18% | 28 d | 0% | **11** | No aprueba | Cumplimiento 18% (mín. 50%); Recencia 0% (mín. 50%) |
 
 > Para aprobar el IC: **2 sesiones por semana** sostenidas, sin pausas mayores a **10 días** y con actividad en las **últimas 2 semanas**. Se excluyen merges, bots y al docente. Zona horaria UTC-3.
 
@@ -144,11 +144,11 @@ _Cumple **todos** los criterios del semáforo: no hay nada que arreglar para apr
 
 ## 6. Actividad en clase y fuera de clase
 
-> Se consideran las **28 clases** del período (miércoles y viernes, según `config/constancia.json`; feriados y semanas sin clase descontados). Para cada alumno se muestra la actividad **en cada clase** y también la actividad **fuera de los días de clase** (fines de semana u otros días). `Commits` = commits de trabajo (no-merge); `Merges` = merges de PR (también son push). Los días sin actividad dicen **sin actividad**.
+> Se consideran las **29 clases** del período (miércoles y viernes, según `config/constancia.json`; feriados y semanas sin clase descontados). Para cada alumno se muestra la actividad **en cada clase** y también la actividad **fuera de los días de clase** (fines de semana u otros días). `Commits` = commits de trabajo (no-merge); `Merges` = merges de PR (también son push). Los días sin actividad dicen **sin actividad**.
 
 ### Juan Ignacio Cruzado
 
-**14/28 clases con actividad** · total del período: 45 commits · 27 merges
+**14/29 clases con actividad** · total del período: 45 commits · 27 merges
 
 | Fecha | Actividad | Repositorios | Commits / merges |
 |---|:--:|---|--:|
@@ -180,6 +180,7 @@ _Cumple **todos** los criterios del semáforo: no hay nada que arreglar para apr
 | 2026-11-11 | No | sin actividad | 0 / 0 |
 | 2026-11-13 | No | sin actividad | 0 / 0 |
 | 2026-11-18 | **Sí** | B-Profesional, F-profesional | 2 / 0 |
+| 2026-11-20 | No | sin actividad | 0 / 0 |
 
 **Fuera de clase:** 1 fecha(s) con actividad · 0 commits · 5 merges
 
@@ -189,7 +190,7 @@ _Cumple **todos** los criterios del semáforo: no hay nada que arreglar para apr
 
 ### Juan Martín Rodríguez Secchi
 
-**1/28 clases con actividad** · total del período: 3 commits · 0 merges
+**1/29 clases con actividad** · total del período: 3 commits · 0 merges
 
 | Fecha | Actividad | Repositorios | Commits / merges |
 |---|:--:|---|--:|
@@ -221,12 +222,13 @@ _Cumple **todos** los criterios del semáforo: no hay nada que arreglar para apr
 | 2026-11-11 | No | sin actividad | 0 / 0 |
 | 2026-11-13 | No | sin actividad | 0 / 0 |
 | 2026-11-18 | No | sin actividad | 0 / 0 |
+| 2026-11-20 | No | sin actividad | 0 / 0 |
 
 **Fuera de clase:** sin actividad registrada.
 
 ### juanmasecchi
 
-**11/28 clases con actividad** · total del período: 27 commits · 40 merges
+**11/29 clases con actividad** · total del período: 27 commits · 40 merges
 
 | Fecha | Actividad | Repositorios | Commits / merges |
 |---|:--:|---|--:|
@@ -258,6 +260,7 @@ _Cumple **todos** los criterios del semáforo: no hay nada que arreglar para apr
 | 2026-11-11 | **Sí** | B-Profesional, F-profesional | 0 / 2 |
 | 2026-11-13 | No | sin actividad | 0 / 0 |
 | 2026-11-18 | No | sin actividad | 0 / 0 |
+| 2026-11-20 | No | sin actividad | 0 / 0 |
 
 **Fuera de clase:** sin actividad registrada.
 
