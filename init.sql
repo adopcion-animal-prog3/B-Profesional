@@ -1,9 +1,15 @@
 -- init.sql
--- Esquema inicial para la Plataforma de Adopción y Gestión de Salud Animal
--- Crea tablas: usuarios, mascotas, solicitudes_adopcion, historial_clinico
+-- Esquema compartido de la Plataforma de Adopción y Gestión de Salud Animal.
+-- Lo usan los dos backends (B-Profesional y B-Personal) sobre la misma base.
+-- Es idempotente: puede ejecutarse varias veces sin perder datos.
+--
+-- Roles:
+--   ADMIN     -> cuenta profesional (refugio/veterinaria): publica mascotas.
+--   ADOPTANTE -> cuenta personal: solicita adopciones.
+--
+-- La plataforma arranca vacía: cada persona se registra, publica y adopta.
+-- (B-Profesional solo carga datos de demostración si SEED_DEMO_DATA=true.)
 
--- Tabla: usuarios
--- Almacena los usuarios del sistema con roles ADMIN y ADOPTANTE
 CREATE TABLE IF NOT EXISTS usuarios (
   id BIGSERIAL PRIMARY KEY,
   nombre VARCHAR(150) NOT NULL,
@@ -13,8 +19,6 @@ CREATE TABLE IF NOT EXISTS usuarios (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Tabla: mascotas
--- Almacena los datos de las mascotas disponibles para adopción
 CREATE TABLE IF NOT EXISTS mascotas (
   id BIGSERIAL PRIMARY KEY,
   nombre VARCHAR(150) NOT NULL,
@@ -28,8 +32,12 @@ CREATE TABLE IF NOT EXISTS mascotas (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Tabla: solicitudes_adopcion
--- Almacena las solicitudes de adopción de usuarios
+-- Las cuentas confirman su email con un código antes de poder usarse.
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verificado BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- Imagen de la mascota como data URL (data:image/...;base64,...).
+ALTER TABLE mascotas ADD COLUMN IF NOT EXISTS imagen TEXT;
+
 CREATE TABLE IF NOT EXISTS solicitudes_adopcion (
   id BIGSERIAL PRIMARY KEY,
   usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -40,8 +48,6 @@ CREATE TABLE IF NOT EXISTS solicitudes_adopcion (
   updated_at TIMESTAMPTZ
 );
 
--- Tabla: historial_clinico
--- Almacena el historial clínico y registros médicos de las mascotas
 CREATE TABLE IF NOT EXISTS historial_clinico (
   id BIGSERIAL PRIMARY KEY,
   mascota_id BIGINT NOT NULL REFERENCES mascotas(id) ON DELETE CASCADE,
@@ -52,24 +58,32 @@ CREATE TABLE IF NOT EXISTS historial_clinico (
   updated_at TIMESTAMPTZ
 );
 
--- Datos de desarrollo (ficticios, no reales y no sensibles)
--- Estos registros permiten probar el backend y las consultas sin violar
--- las restricciones actuales del esquema.
-INSERT INTO usuarios (nombre, email, password_hash, rol)
-VALUES
-  ('Administrador Demo', 'admin.dev@example.com', 'dev_admin_hash_001', 'ADMIN'),
-  ('Adoptante Demo', 'adoptante.dev@example.com', 'dev_adoptante_hash_001', 'ADOPTANTE'),
-  ('Adoptante Secundario', 'adoptante2.dev@example.com', 'dev_adoptante_hash_002', 'ADOPTANTE');
+-- Mensajes directos entre cuentas (adoptante <-> publicador).
+CREATE TABLE IF NOT EXISTS mensajes (
+  id BIGSERIAL PRIMARY KEY,
+  remitente_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  destinatario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  mascota_id BIGINT REFERENCES mascotas(id) ON DELETE SET NULL,
+  contenido TEXT NOT NULL CHECK (length(trim(contenido)) > 0),
+  leido BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (remitente_id <> destinatario_id)
+);
 
-INSERT INTO mascotas (nombre, especie, raza, edad, sexo, descripcion, adoptada, creado_por)
-VALUES
-  ('Luna', 'Perro', 'Labrador', 2, 'F', 'Perra sociable, muy activa y amigable.', FALSE,
-   (SELECT id FROM usuarios WHERE email = 'admin.dev@example.com')),
-  ('Simón', 'Gato', 'Siames', 1, 'M', 'Gato tranquilo, ideal para departamentos pequeños.', FALSE,
-   (SELECT id FROM usuarios WHERE email = 'adoptante.dev@example.com')),
-  ('Nina', 'Conejo', 'Mini Lop', 3, 'F', 'Coneja muy cariñosa y dócil.', TRUE,
-   (SELECT id FROM usuarios WHERE email = 'adoptante2.dev@example.com')),
-  ('Max', 'Perro', 'Juan', 5, 'M', 'Perro equilibrado, paciente y atento.', FALSE,
-   (SELECT id FROM usuarios WHERE email = 'admin.dev@example.com')),
-  ('Mimi', 'Gato', 'Persa', 4, 'OTRO', 'Gata curiosa, observadora y muy afectuosa.', FALSE,
-   (SELECT id FROM usuarios WHERE email = 'adoptante.dev@example.com'));
+-- Códigos de verificación enviados por email (registro e inicio de sesión).
+-- Se guarda un HMAC del código, nunca el código en texto plano.
+CREATE TABLE IF NOT EXISTS codigos_verificacion (
+  id BIGSERIAL PRIMARY KEY,
+  usuario_id BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  proposito VARCHAR(20) NOT NULL CHECK (proposito IN ('REGISTRO','LOGIN')),
+  codigo_hash VARCHAR(64) NOT NULL,
+  intentos INTEGER NOT NULL DEFAULT 0,
+  usado BOOLEAN NOT NULL DEFAULT FALSE,
+  expira_en TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_codigos_usuario ON codigos_verificacion (usuario_id);
+CREATE INDEX IF NOT EXISTS idx_mensajes_remitente ON mensajes (remitente_id);
+CREATE INDEX IF NOT EXISTS idx_mensajes_destinatario ON mensajes (destinatario_id);
+CREATE INDEX IF NOT EXISTS idx_mascotas_creado_por ON mascotas (creado_por);

@@ -3,6 +3,9 @@
 // verifica rutas, validaciones, parametros SQL y codigos HTTP, no persistencia.
 const { before, after, beforeEach } = require('node:test');
 
+// Los correos se guardan en memoria (mailer.outbox) en lugar de enviarse.
+process.env.MAIL_MODE = 'memory';
+
 const dbPath = require.resolve('../../src/config/database');
 const calls = [];
 let responder = async () => ({ rows: [] });

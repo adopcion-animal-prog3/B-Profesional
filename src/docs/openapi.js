@@ -30,6 +30,21 @@ const nullableString = (example) => ({ type: 'string', nullable: true, ...(examp
 const sexo = { type: 'string', enum: ['M', 'F', 'OTRO'], nullable: true };
 const estadoSolicitud = { type: 'string', enum: ['PENDIENTE', 'APROBADA', 'RECHAZADA'] };
 const AUTH_ERRORS = [400, 401, 403, 404, 500];
+const imagenField = {
+  type: 'string',
+  nullable: true,
+  description: 'Imagen como data URL base64 (PNG, JPEG, WEBP o GIF, máx. ~2 MB)',
+  example: 'data:image/jpeg;base64,/9j/4AAQ...',
+};
+const verificacionPendiente = objectOf({
+  verificacion_requerida: { type: 'boolean', example: true },
+  verificacion: objectOf({
+    email: { type: 'string', format: 'email' },
+    proposito: { type: 'string', enum: ['REGISTRO', 'LOGIN'] },
+    expira_en_minutos: { type: 'integer', example: 10 },
+  }),
+});
+const usuarioIdParam = [{ in: 'path', name: 'usuarioId', required: true, schema: { type: 'integer', minimum: 1 } }];
 
 const operation = (tag, summary, responses, extra = {}) => ({ tags: [tag], summary, ...extra, responses });
 const securedById = (tag, summary, responses, extra = {}) =>
@@ -71,8 +86,23 @@ const schemas = {
     descripcion: nullableString('Perro muy sociable'),
     adoptada: { type: 'boolean', example: false },
     creado_por: { type: 'integer', nullable: true, example: 2 },
+    imagen: imagenField,
     created_at: dateTime,
   }, ['id', 'nombre', 'especie', 'adoptada', 'created_at']),
+  Mensaje: objectOf({
+    id: { type: 'integer', example: 1 },
+    remitente_id: { type: 'integer', example: 2 },
+    destinatario_id: { type: 'integer', example: 1 },
+    mascota_id: { type: 'integer', nullable: true, example: 3 },
+    contenido: { type: 'string', example: '¿Puedo visitar a Luna?' },
+    leido: { type: 'boolean', example: false },
+    created_at: dateTime,
+  }, ['id', 'remitente_id', 'destinatario_id', 'contenido', 'leido']),
+  PublicUser: objectOf({
+    id: { type: 'integer', example: 2 },
+    nombre: { type: 'string', example: 'Ana Gomez' },
+    rol: { type: 'string', enum: ['ADMIN', 'ADOPTANTE'] },
+  }, ['id', 'nombre', 'rol']),
   HistorialClinico: objectOf({
     id: { type: 'integer', example: 1 },
     mascota_id: { type: 'integer', example: 1 },
@@ -130,7 +160,14 @@ const mascotaFields = {
   sexo,
   descripcion: nullableString(),
   adoptada: { type: 'boolean' },
+  imagen: imagenField,
 };
+const mensaje = schemaRef('Mensaje');
+const conversacion = objectOf({
+  usuario: schemaRef('PublicUser'),
+  ultimo_mensaje: mensaje,
+  no_leidos: { type: 'integer', example: 1 },
+});
 
 const paths = {
   '/health': {
@@ -145,10 +182,42 @@ const paths = {
     }, { description: 'Ejecuta una comprobación mínima (SELECT 1) sobre el pool de conexiones existente.' }),
   },
   '/api/auth/login': {
-    post: operation('Auth', 'Inicia sesión y devuelve un JWT para las llamadas autenticadas', {
-      200: response('Login exitoso', schemaRef('LoginResponse')),
-      ...errors(400, 401, 500),
+    post: operation('Auth', 'Paso 1: valida la contraseña y envía un código de 6 dígitos al email', {
+      202: response('Código enviado', success(verificacionPendiente)),
+      ...errors(400, 401, 403, 500),
     }, { requestBody: jsonBody(schemaRef('LoginRequest')) }),
+  },
+  '/api/auth/verify': {
+    post: operation('Auth', 'Paso 2 (login o registro): valida el código del email y devuelve el JWT', {
+      200: response('Código válido', schemaRef('LoginResponse')),
+      ...errors(400, 500),
+      429: errorResponse('Demasiados intentos con el mismo código'),
+    }, {
+      requestBody: jsonBody(objectOf({
+        email: { type: 'string', format: 'email' },
+        codigo: { type: 'string', pattern: '^\\d{6}$', example: '482913' },
+      }, ['email', 'codigo'])),
+    }),
+  },
+  '/api/auth/resend-code': {
+    post: operation('Auth', 'Reenvía el código pendiente (máximo uno por minuto)', {
+      200: response('Solicitud recibida', successMessage('If a verification is pending, a new code was sent')),
+      ...errors(400),
+      429: errorResponse('Hay que esperar un minuto para pedir otro código'),
+    }, { requestBody: jsonBody(objectOf({ email: { type: 'string', format: 'email' } }, ['email'])) }),
+  },
+  '/api/auth/register': {
+    post: operation('Auth', 'Registra una cuenta profesional (rol ADMIN) y envía el código de verificación', {
+      201: response('Cuenta creada, pendiente de verificación', success(verificacionPendiente)),
+      ...errors(400, 500),
+      409: errorResponse('El email ya está registrado'),
+    }, {
+      requestBody: jsonBody(objectOf({
+        nombre: { type: 'string', example: 'Refugio Sur' },
+        email: { type: 'string', format: 'email' },
+        password: { type: 'string', minLength: 8 },
+      }, ['nombre', 'email', 'password'])),
+    }),
   },
   '/api/auth/validate-token': {
     get: operation('Auth', 'Valida el JWT actual y devuelve el usuario autenticado', {
@@ -184,8 +253,10 @@ const paths = {
         sexo: { ...sexo, example: 'M' },
         descripcion: nullableString('Perro muy sociable'),
         adoptada: { type: 'boolean', example: false },
-        creado_por: { type: 'integer', nullable: true, example: 2 },
+        imagen: imagenField,
       }, ['nombre', 'especie'])),
+      security: bearer,
+      description: 'Solo cuentas profesionales (ADMIN). El publicador (creado_por) se toma del token.',
     }),
   },
   '/api/mascotas/{id}': {
@@ -193,10 +264,11 @@ const paths = {
       200: response('Mascota encontrada', success(mascota)),
       ...errors(400, 404, 500),
     }, { parameters: idParam }),
-    put: operation('Mascotas', 'Actualiza una mascota por ID', {
+    put: operation('Mascotas', 'Actualiza una mascota por ID (solo su publicador)', {
       200: response('Mascota actualizada', success(mascota)),
-      ...errors(400, 404, 500),
+      ...errors(400, 401, 403, 404, 500),
     }, {
+      security: bearer,
       parameters: idParam,
       requestBody: jsonBody({
         type: 'object',
@@ -204,10 +276,10 @@ const paths = {
         properties: mascotaFields,
       }),
     }),
-    delete: operation('Mascotas', 'Elimina una mascota por ID', {
+    delete: operation('Mascotas', 'Elimina una mascota por ID (solo su publicador)', {
       200: response('Mascota eliminada', successMessage('Mascota deleted successfully', mascota)),
-      ...errors(400, 404, 500),
-    }, { parameters: idParam }),
+      ...errors(400, 401, 403, 404, 500),
+    }, { security: bearer, parameters: idParam }),
   },
   '/api/mascotas/{id}/historial': {
     get: securedById('Mascotas', 'Obtiene el historial clínico de una mascota', {
@@ -273,6 +345,43 @@ const paths = {
   },
 };
 
+Object.assign(paths, {
+  '/api/mensajes': {
+    post: operation('Mensajes', 'Envía un mensaje a otra cuenta', {
+      201: response('Mensaje enviado', success(mensaje)),
+      ...errors(400, 401, 404, 500),
+    }, {
+      security: bearer,
+      requestBody: jsonBody(objectOf({
+        destinatario_id: { type: 'integer', example: 2 },
+        mascota_id: { type: 'integer', nullable: true, example: 3 },
+        contenido: { type: 'string', maxLength: 2000 },
+      }, ['destinatario_id', 'contenido'])),
+    }),
+  },
+  '/api/mensajes/conversaciones': {
+    get: operation('Mensajes', 'Lista las conversaciones del usuario autenticado', {
+      200: response('Conversaciones', success({ type: 'array', items: conversacion })),
+      ...errors(401, 500),
+    }, { security: bearer }),
+  },
+  '/api/mensajes/conversaciones/{usuarioId}': {
+    get: operation('Mensajes', 'Obtiene los mensajes intercambiados con otra cuenta', {
+      200: response('Conversación', success(objectOf({
+        usuario: schemaRef('PublicUser'),
+        mensajes: { type: 'array', items: mensaje },
+      }))),
+      ...errors(400, 401, 404, 500),
+    }, { security: bearer, parameters: usuarioIdParam }),
+  },
+  '/api/mensajes/conversaciones/{usuarioId}/leidos': {
+    put: operation('Mensajes', 'Marca como leídos los mensajes recibidos de otra cuenta', {
+      200: response('Mensajes marcados', success(objectOf({ actualizados: { type: 'integer' } }))),
+      ...errors(400, 401, 404, 500),
+    }, { security: bearer, parameters: usuarioIdParam }),
+  },
+});
+
 const openApiSpec = {
   openapi: '3.0.3',
   info: {
@@ -286,6 +395,7 @@ const openApiSpec = {
     { name: 'Auth', description: 'Autenticación y autorización JWT' },
     { name: 'Mascotas', description: 'Gestión de mascotas y historial clínico' },
     { name: 'Solicitudes', description: 'Solicitudes de adopción' },
+    { name: 'Mensajes', description: 'Mensajes entre adoptantes y publicadores' },
   ],
   components: {
     securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' } },

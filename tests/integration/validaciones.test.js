@@ -2,7 +2,7 @@ const { describe, it, before } = require('node:test');
 const assert = require('node:assert/strict');
 const { useMemoryApp } = require('../helpers/memoryApp');
 
-const { request, login } = useMemoryApp();
+const { request, login, tokenFor } = useMemoryApp();
 
 describe('validaciones de historial clínico y solicitudes (base en memoria)', () => {
   let admin;
@@ -10,7 +10,7 @@ describe('validaciones de historial clínico y solicitudes (base en memoria)', (
 
   before(async () => {
     admin = await login('admin@adopcion.test');
-    adoptante = await login('adoptante@adopcion.test');
+    adoptante = await tokenFor('adoptante@adopcion.test');
   });
 
   it('rechaza IDs inválidos y recursos inexistentes en el historial', async () => {
