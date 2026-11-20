@@ -13,9 +13,9 @@
 | Índice de calidad de servicios | **100/100** (mínimo 50) |
 | Criterios cumplidos | **15/15** |
 | Aprobado (semáforo) | **SI** |
-| Código (LOC) | 1,587 |
-| Archivos de código | 20 |
-| Tests (archivos) | 20 |
+| Código (LOC) | 2,060 |
+| Archivos de código | 29 |
+| Tests (archivos) | 24 |
 | Cobertura de líneas | 97.3% (mínimo 80%) |
 | Capas detectadas | presentacion, logica, datos |
 | Pushes directos a `main` (sin PR) | 0 |
@@ -26,11 +26,13 @@
 
 | Autor | Commits | Código (LOC) | Tests (LOC) | Docs (LOC) | Días activos | % del código |
 |---|---:|---:|---:|---:|---:|---:|
-| Juan Ignacio Cruzado | 27 | 1,105 | 732 | 311 | 14 | 52% |
-| Juan Martín Rodríguez Secchi | 2 | 912 | 0 | 0 | 1 | 43% |
-| juanmasecchi | 7 | 106 | 0 | 5 | 6 | 5% |
+| Juan Ignacio Cruzado | 28 | 1,753 | 1,231 | 311 | 15 | 66% |
+| Juan Martín Rodríguez Secchi | 2 | 901 | 0 | 0 | 1 | 34% |
+| juanmasecchi | 7 | 14 | 0 | 5 | 6 | 1% |
 
 > _El LOC de autoría lo calcula RepoSense sobre el historial y puede diferir del LOC de código del análisis de calidad (que mira solo el estado de `main`)._
+
+> **Reparto del trabajo:** Juan Ignacio Cruzado concentra el 66% de las líneas de código. Un reparto muy desigual suele indicar que la integración no fue realmente en equipo; vale la pena reconstruir cómo se coordinó.
 
 ## 3. Constancia (IC) — todas las ramas
 
@@ -58,7 +60,7 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 - **Qué mide:** Porcentaje de bloques de código repetidos (similitud) en el repositorio.
 - **Por qué importa:** Cada copia se mantiene por separado: un arreglo hay que repetirlo y los defectos se multiplican.
-- **Tu resultado:** **1.4%** de duplicación _(máximo 15%)_
+- **Tu resultado:** **0.9%** de duplicación _(máximo 15%)_
 
 ### 3. Secretos hardcodeados (SEC) — OK
 
@@ -112,13 +114,13 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 - **Qué mide:** Complejidad ciclomática: cantidad de caminos posibles dentro de una función (condicionales, bucles, casos).
 - **Por qué importa:** Muchos caminos = difícil de seguir y de probar; suelen esconderse casos sin cubrir.
-- **Tu resultado:** **7** bloque(s) de complejidad alta _(máximo 5 por 1000 LOC (tenés 1587 LOC))_
+- **Tu resultado:** **6** bloque(s) de complejidad alta _(máximo 5 por 1000 LOC (tenés 2060 LOC))_
 
 ### 12. Funciones/métodos largos o con muchos parámetros (Tam) — OK
 
 - **Qué mide:** Tamaño de las funciones/métodos y cantidad de parámetros.
 - **Por qué importa:** Una función que hace varias cosas cuesta leerla, nombrarla y reutilizarla.
-- **Tu resultado:** **6** función/método(s) largos o con muchos parámetros _(máximo 10 por 1000 LOC)_
+- **Tu resultado:** **5** función/método(s) largos o con muchos parámetros _(máximo 10 por 1000 LOC)_
 
 ### 13. Acoplamiento alto (Acop) — OK
 
@@ -136,7 +138,7 @@ Cada aspecto indica **qué mide**, **por qué importa** y **tu resultado**. Cuan
 
 - **Qué mide:** Cantidad de endpoints (rutas HTTP) expuestos por el backend.
 - **Por qué importa:** El backend se mide por lo que expone: pocos endpoints sugiere poca funcionalidad de servicio.
-- **Tu resultado:** **21** endpoint(s) _(mínimo 5)_
+- **Tu resultado:** **28** endpoint(s) _(mínimo 5)_
 
 ## 5. Observaciones y qué falta
 
